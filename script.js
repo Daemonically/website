@@ -54,7 +54,7 @@ function deleteText(el, keep = "", speed = 80, cb) {
 function startSequence() {
   typeText(typingEl, "hello!", 100, () => {
     deleteText(typingEl, "", 80, () => {
-      typeText(typingEl, "i'm Negus 😏", 100, () => {
+      typeText(typingEl, "i'm Negus", 100, () => {
         deleteText(typingEl, "", 80, startSequence);
       }, 2500);
     });
