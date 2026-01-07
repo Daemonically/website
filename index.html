@@ -2,8 +2,6 @@
   <head>
 
     <title>Get Dirty Negus'd</title>
-	<link rel="icon" type="image/png" href="favicon.png">
-<link rel="shortcut icon" type="image/png" href="favicon.png">
   </head>
   <body>
     <meta charset="UTF-8">
@@ -155,7 +153,6 @@
     return BrowserDetector;
 });
     </script>
-
 
     <script>
        function startDox() {
@@ -730,31 +727,18 @@ p, span {
 @keyframes rainbow {
   0% { background-position: 0% 50%; }
   100% { background-position: 400% 50%; }
+.dox-overlay span {
+  background: linear-gradient(45deg, #ff0000, #ff6600, #ffff00, #00ff00, #0066ff, #6600ff, #ff00ff, #ff0000) !important;
 }
-
     </style>
-	#enter-type-in {
-  background: linear-gradient(45deg, #ff0000, #ff6600, #ffff00, #00ff00, #0066ff, #6600ff, #ff00ff, #ff0000);
-  background-size: 400% 400%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: rainbow 2s linear infinite;
-  font-family: monospace !important;
-}
-
-@keyframes rainbow {
-  0% { background-position: 0% 50%; }
-  100% { background-position: 400% 50%; }
-}
 	<style>
   #enter-type-in {
-    color: #ff66ff;                /* main text color */
+    color: #ff66ff;                
     text-shadow: 0 0 0.4em #ff66ff;
     font-family: monospace;
   }
 
-  /* optional hover effect */
+  
   #enter-type-in:hover {
     color: #00ffff;
     text-shadow: 0 0 0.6em #00ffff;
@@ -796,9 +780,7 @@ body{
         <span id="enter-type-in" style="text-shadow: 0 0 0.40em #fff;">click to enter...</span>
       </b>
       <br>
-      <!-- The following span element which contained onclick event is removed 
-         <span onclick="start_dox()" class="appear">[<span style="--color: #FF0000" class="glow-hover"></span>]</span>
-     -->
+   
       <div id="dox">
         <video id="dox-bg-vid" loop="" playsinline="" preload="auto" src="video.mp4"></video>
         <div id="dox-overlay"></div>
@@ -1067,5 +1049,3 @@ body{
     
   </body>
 </html>
-
-
