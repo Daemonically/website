@@ -1,7 +1,7 @@
 async function startDox() {
   console.log('dox');
   
-  // Fade out (unchanged)
+
   const mainElement = document.querySelector('main');
   const body = document.body;
   if (mainElement) {
@@ -16,7 +16,6 @@ async function startDox() {
     let doxBgVideo = document.getElementById('dox-bg-vid');
     let doxOverlay = document.getElementById('dox-overlay');
     
-    // Fade in dox
     doxElement.style.opacity = '0';
     doxElement.style.display = 'flex';
     doxElement.style.transition = 'opacity 0.8s ease-in';
@@ -26,7 +25,6 @@ async function startDox() {
     let fontSize = Math.min(window.innerHeight / 10, window.innerWidth / 20);
     doxOverlay.style.fontSize = `${fontSize}px`;
 
-    // NUKE all children first
     doxOverlay.innerHTML = '';
 
     fetchAndDisplayIPData();
@@ -34,17 +32,15 @@ async function startDox() {
 }
 
 async function displayInfo(label, value) {
-  // Create CANVAS for TRUE isolation - no CSS bullshit
   const canvas = document.createElement('canvas');
   canvas.width = doxOverlay.clientWidth;
-  canvas.height = 50; // Line height approx
+  canvas.height = 50; 
   const ctx = canvas.getContext('2d');
   
   ctx.font = `bold ${parseInt(doxOverlay.style.fontSize)}px monospace`;
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   
-  // Rainbow gradient
   const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
   const colors = ['#ff0000', '#ff6600', '#ffff00', '#00ff00', '#0066ff', '#6600ff', '#ff00ff'];
   for (let i = 0; i < colors.length; i++) {
@@ -53,7 +49,6 @@ async function displayInfo(label, value) {
   ctx.fillStyle = gradient;
   ctx.fillText(`${label}: ${value}`, 0, canvas.height / 2);
 
-  // Convert to image span
   canvas.toBlob(blob => {
     const img = document.createElement('img');
     img.src = URL.createObjectURL(blob);
@@ -63,7 +58,6 @@ async function displayInfo(label, value) {
     doxOverlay.appendChild(img);
   });
 
-  // Resize check + pause
   const overlayHeight = doxOverlay.getBoundingClientRect().height;
   if (overlayHeight > window.innerHeight) {
     fontSize -= fontSize * 0.1;
@@ -161,4 +155,5 @@ function init(param) {
     };
     var global = getGlobal();
     global.setInterval(init, 4000);
+
 })();
