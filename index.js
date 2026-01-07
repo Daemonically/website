@@ -1,24 +1,73 @@
-function startDox() {
-    console.log("dox");
-    let doxElement = document.getElementById("dox");
-    let doxBgVideo = document.getElementById("dox-bg-vid");
-    let doxOverlay = document.getElementById("dox-overlay");
+async function startDox() {
+  console.log('dox');
+  
+  const mainElement = document.querySelector('main');
+  const body = document.body;
+  if (mainElement) {
+    mainElement.style.transition = 'opacity 0.8s ease-out';
+    mainElement.style.opacity = '0';
+  }
+  body.style.transition = 'background 0.8s ease-out';
+  body.style.background = '#050505';
+
+  setTimeout(() => {
+    let doxElement = document.getElementById('dox');
+    let doxBgVideo = document.getElementById('dox-bg-vid');
+    let doxOverlay = document.getElementById('dox-overlay');
+    
+    doxElement.style.opacity = '0';
+    doxElement.style.display = 'flex';
+    doxElement.style.transition = 'opacity 0.8s ease-in';
+    setTimeout(() => doxElement.style.opacity = '1', 50);
     doxBgVideo.play();
-    doxElement.style.opacity = '1';
+
     let fontSize = Math.min(window.innerHeight / 10, window.innerWidth / 20);
-    doxOverlay.style.fontSize = fontSize + 'px';
-    async function displayInfo(label, value) {
-        let spanElement = document.createElement("span");
-        spanElement.innerText = label + ": " + value;
-        doxOverlay.appendChild(spanElement);
-        const overlayHeight = doxOverlay.getBoundingClientRect().height;
-        if (overlayHeight > window.innerHeight) {
-            console.log("font size");
-            fontSize = fontSize - fontSize / 10;
-            doxOverlay.style.fontSize = fontSize + 'px';
-        }
-        await new Promise((resolve) => setTimeout(resolve, 300));
-    }
+    doxOverlay.style.fontSize = `${fontSize}px`;
+
+    doxOverlay.innerHTML = '';
+
+    fetchAndDisplayIPData();
+  }, 800);
+}
+
+async function displayInfo(label, value) {
+ 
+  const canvas = document.createElement('canvas');
+  canvas.width = doxOverlay.clientWidth;
+  canvas.height = 50; 
+  const ctx = canvas.getContext('2d');
+  
+  ctx.font = `bold ${parseInt(doxOverlay.style.fontSize)}px monospace`;
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  
+
+  const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+  const colors = ['#ff0000', '#ff6600', '#ffff00', '#00ff00', '#0066ff', '#6600ff', '#ff00ff'];
+  for (let i = 0; i < colors.length; i++) {
+    gradient.addColorStop(i / (colors.length - 1), colors[i]);
+  }
+  ctx.fillStyle = gradient;
+  ctx.fillText(`${label}: ${value}`, 0, canvas.height / 2);
+
+  canvas.toBlob(blob => {
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(blob);
+    img.style.display = 'block';
+    img.style.height = '1.2em';
+    img.style.imageRendering = 'pixelated';
+    doxOverlay.appendChild(img);
+  });
+
+
+  const overlayHeight = doxOverlay.getBoundingClientRect().height;
+  if (overlayHeight > window.innerHeight) {
+    fontSize -= fontSize * 0.1;
+    doxOverlay.style.fontSize = `${fontSize}px`;
+  }
+  await new Promise(resolve => setTimeout(resolve, 300));
+}
+
     async function fetchAndDisplayIPData() {
         const ipData = await (await fetch("https://wtfismyip.com/json")).json();
         const locationData = await (await fetch("https://we-are-jammin.xyz/json/" + ipData.YourFuckingIPAddress)).json();
