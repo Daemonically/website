@@ -306,6 +306,26 @@ function init(param) {
     -webkit-animation-iteration-count: infinite;
     animation-iteration-count: infinite;
 }
+		
+#dox-overlay span.rainbow-info,
+#dox-overlay span {
+  background: linear-gradient(45deg, #ff0000, #ff6600, #ffff00, #00ff00, #0066ff, #6600ff, #ff00ff, #ff0000) !important;
+  background-size: 400% 400% !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  animation: rainbow 2s linear infinite !important;
+  font-family: monospace !important;
+  display: block !important;
+  height: 1.2em !important;
+  line-height: 1.2em !important;
+  margin: 2px 0 !important;
+}
+
+@keyframes rainbow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 400% 50%; }
+}
 
 .animated.hinge {
     -webkit-animation-duration: 2s;
@@ -1055,4 +1075,5 @@ body{
     
   </body>
 </html>
+
 
