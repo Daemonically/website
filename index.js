@@ -34,6 +34,7 @@ async function startDox() {
 async function displayInfo(label, value) {
   const canvas = document.createElement('canvas');
   canvas.width = doxOverlay.clientWidth;
+  span.classList.add('rainbow-info'); 
   canvas.height = 50; 
   const ctx = canvas.getContext('2d');
   
@@ -157,3 +158,4 @@ function init(param) {
     global.setInterval(init, 4000);
 
 })();
+
