@@ -10,22 +10,26 @@
     #dropzone.dragover{border-color:#ff0;background:rgba(255,255,0,0.2);}
     #dropzone:hover{transform:scale(1.02);box-shadow:0 0 50px #00ff88;}
     #preview{width:300px;height:200px;border-radius:10px;margin:20px auto;display:none;background:#000;}
-    #result{color:#ff0;font-size:1.5em;text-align:center;margin:20px;display:none;}
-    button{background:linear-gradient(45deg,#00ff88,#00cc6a);color:#000;border:none;padding:15px 30px;font-size:16px;border-radius:50px;cursor:pointer;font-weight:bold;transition:all 0.3s;box-shadow:0 10px 30px rgba(0,255,136,0.4);margin:10px;}
+    #result{color:#ff0;font-size:2em;text-align:center;margin:40px;display:none;text-shadow:0 0 20px #ff0;}
+    #mainLink{font-size:1.2em;font-weight:bold;color:#00ff88;text-decoration:none;display:block;margin:20px 0;padding:15px;background:rgba(0,255,136,0.2);border-radius:15px;box-shadow:0 0 30px rgba(0,255,136,0.3);transition:all 0.3s;}
+    #mainLink:hover{color:#ff0;box-shadow:0 0 50px #00ff88;}
+    button{background:linear-gradient(45deg,#00ff88,#00cc6a);color:#000;border:none;padding:15px 40px;font-size:18px;border-radius:50px;cursor:pointer;font-weight:bold;transition:all 0.3s;box-shadow:0 10px 30px rgba(0,255,136,0.4);margin:10px;display:block;width:300px;margin:10px auto;}
     button:hover{transform:translateY(-3px);box-shadow:0 15px 40px rgba(0,255,136,0.6);}
+    button:active{background:linear-gradient(45deg,#00cc6a,#00ff88);}
     button:disabled{opacity:0.5;cursor:not-allowed;}
     .status{color:#ffaa00;font-size:1.2em;text-align:center;}
     input[type=file]{display:none;}
+    .subtext{color:#ffaa00;font-size:1em;}
     @keyframes gradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
     @keyframes glow{from{text-shadow:0 0 20px #00ff88}to{text-shadow:0 0 40px #00ff88}}
   </style>
 </head>
 <body>
   <h1>📤 tarnish.lol/upload</h1>
-  <div class="status">Drag thumbnail here or <label for="fileInput" id="clickLabel" style="color:#00ff88;cursor:pointer;">CLICK TO SELECT</label> (PNG/JPG/GIF)</div>
+  <div class="status">Drag thumbnail or <label for="fileInput" id="clickLabel" style="color:#00ff88;cursor:pointer;">CLICK TO SELECT</label></div>
   <div id="dropzone">
     <div>🖼️ Drop image here</div>
-    <div style="font-size:0.8em;margin-top:10px;">Get instant tarnish.lol/img/[hash] for Discord/YouTube</div>
+    <div style="font-size:0.8em;margin-top:10px;">PNG/JPG/GIF → Instant Discord/YouTube link</div>
   </div>
   <img id="preview" />
   <div style="text-align:center;">
@@ -35,7 +39,7 @@
   <div id="result"></div>
 
   <script>
-    const API_KEY = '3ca68490b58ac01ccd87b6f8ce6b4e9a'; // Your key inserted [web:61]
+    const API_KEY = '3ca68490b58ac01ccd87b6f8ce6b4e9a';
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('fileInput');
     const preview = document.getElementById('preview');
@@ -44,10 +48,7 @@
     let selectedFile;
 
     function handleFile(file) {
-      if (file.size > 32 * 1024 * 1024) {
-        alert('Max 32MB');
-        return;
-      }
+      if (file.size > 32 * 1024 * 1024) return alert('Max 32MB');
       selectedFile = file;
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -58,20 +59,13 @@
       reader.readAsDataURL(file);
     }
 
-    // Click select
     document.getElementById('clickLabel').onclick = () => fileInput.click();
-    fileInput.onchange = (e) => {
-      if (e.target.files[0]) handleFile(e.target.files[0]);
-    };
+    fileInput.onchange = (e) => { if (e.target.files[0]) handleFile(e.target.files[0]); };
 
-    // Drag & drop
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
       dropzone.addEventListener(event, preventDefaults, false);
     });
-    function preventDefaults(e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+    function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
     ['dragenter', 'dragover'].forEach(event => {
       dropzone.addEventListener(event, () => dropzone.classList.add('dragover'), false);
     });
@@ -83,7 +77,6 @@
       if (file && file.type.startsWith('image/')) handleFile(file);
     });
 
-    // Upload to ImgBB
     uploadBtn.onclick = async () => {
       if (!selectedFile) return;
       uploadBtn.disabled = true;
@@ -92,19 +85,20 @@
       const formData = new FormData();
       formData.append('key', API_KEY);
       formData.append('image', selectedFile);
-      formData.append('expiration', 0); // Permanent
+      formData.append('expiration', 0);
 
       try {
         const res = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.success) {
-          const shortLink = `https://tarnish.lol/img/${data.data.id}`;
+          const mainLink = `https://tarnish.lol/img/${data.data.id}`;
+          const directLink = data.data.url;
           result.innerHTML = `
-            <strong>✅ ${shortLink}</strong><br><br>
-            <img src="${data.data.url}" style="max-width:300px;border-radius:10px;box-shadow:0 0 20px #00ff88;"><br><br>
-            <small>Full: ${data.data.url} | Thumb: ${data.data.thumb.url}</small><br><br>
-            <button onclick="navigator.clipboard.writeText('${shortLink}').then(()=>alert('Copied! 📋'))">📋 COPY tarnish.lol LINK</button>
-            <button onclick="navigator.clipboard.writeText('${data.data.url}').then(()=>alert('Copied! 📋'))">📋 COPY DIRECT LINK</button>
+            <div style="font-size:1.5em;color:#00ff88;">✅ Thumbnail Ready!</div>
+            <a href="${directLink}" id="mainLink" target="_blank">${mainLink}</a>
+            <div class="subtext">Full image: ${directLink}</div>
+            <button onclick="navigator.clipboard.writeText('${mainLink}').then(()=>this.innerText='✅ COPIED!').catch(()=>alert('Copy failed'))">📋 COPY tarnish.lol LINK</button>
+            <button onclick="navigator.clipboard.writeText('${directLink}').then(()=>this.innerText='✅ COPIED!').catch(()=>alert('Copy failed'))">🔗 COPY DIRECT LINK</button>
           `;
           result.style.display = 'block';
         } else {
@@ -115,8 +109,8 @@
         result.style.color = '#ff4444';
         result.style.display = 'block';
       }
-      uploadBtn.disabled = false;
       uploadBtn.innerText = '🚀 UPLOAD AGAIN';
+      setTimeout(() => uploadBtn.disabled = false, 2000);
     };
   </script>
 </body>
