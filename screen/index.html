@@ -1,152 +1,61 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🔴 tarnish.lol/screen - Native Window Share (P2P)</title>
-  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <title>🔴 tarnish.lol/screen - Native Window Share</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#0f3460);animation:gradient 8s infinite;color:#00ff88;font-family:'Orbitron',monospace;height:100vh;overflow:hidden;}
     h1{font-size:3em;text-shadow:0 0 30px #00ff88;animation:glow 2s infinite alternate;text-align:center;padding:40px 20px;}
-    #localVideo,#remoteVideo{width:48vw;height:45vh;border:3px solid #00ff88;border-radius:20px;margin:1vw;display:inline-block;background:#000;box-shadow:0 0 50px #00ff88;}
+    #viewer{width:98vw;height:70vh;border:3px solid #00ff88;border-radius:20px;margin:2vw auto;display:block;background:#000;box-shadow:0 0 50px #00ff88;}
     button{background:linear-gradient(45deg,#00ff88,#00cc6a);color:#000;border:none;padding:20px 40px;font-size:18px;border-radius:50px;cursor:pointer;font-weight:bold;transition:all 0.3s;box-shadow:0 10px 30px rgba(0,255,136,0.4);}
     button:hover{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,255,136,0.6);}
-    button:disabled{background:#666;transform:none;cursor:not-allowed;}
     .status{color:#ff0;font-size:1.2em;text-align:center;margin:20px;}
-    #roomCode{font-size:1.5em;background:#000;border:2px solid #ff0;padding:10px;border-radius:10px;color:#ff0;}
-    #modeIndicator{color:#ffaa00;font-size:1em;}
+    .instructions{color:#ffaa00;font-size:1.1em;text-align:center;max-width:800px;margin:0 auto;}
     @keyframes gradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
     @keyframes glow{from{text-shadow:0 0 20px #00ff88}to{text-shadow:0 0 40px #00ff88}}
   </style>
 </head>
 <body>
-  <h1>🔴 tarnish.lol/screen (P2P)</h1>
-  <div style="text-align:center;">
-    <div id="modeIndicator"></div>
-    <button id="shareBtn">📱 SHARE WINDOW (G HUB Lua)</button>
-    <div id="status" class="status">HOST: Click SHARE. VIEWER: Enter room code.</div>
-    <div id="roomCode"></div>
+  <h1>🔴 tarnish.lol/screen</h1>
+  <div class="instructions">
+    <strong>PC:</strong> Click SHARE → Pick G HUB Lua → Send room code<br>
+    <strong>Phone:</strong> Enter room code → Watch live!
   </div>
-  <video id="localVideo" autoplay muted playsinline></video>
-  <video id="remoteVideo" autoplay playsinline></video>
+  <div style="text-align:center;">
+    <button id="shareBtn" onclick="toggleShare()">📱 SHARE WINDOW</button>
+    <div id="status" class="status">Room code appears after share</div>
+  </div>
+  <iframe id="viewer" src="https://vdo.ninja/?room=START"></iframe>
 
   <script>
-    let localStream, peer, roomId, isHost = false;
-    
-    const shareBtn = document.getElementById('shareBtn');
+    const viewer = document.getElementById('viewer');
     const status = document.getElementById('status');
-    const roomCode = document.getElementById('roomCode');
-    const modeIndicator = document.getElementById('modeIndicator');
-    const localVideo = document.getElementById('localVideo');
-    const remoteVideo = document.getElementById('remoteVideo');
+    const shareBtn = document.getElementById('shareBtn');
+    let roomId = location.hash.slice(1) || 'TARNISH';
     
-    // Get room ID from hash or generate
-    function getRoomId() {
-      let id = location.hash.slice(1);
-      if (!id) {
-        id = Math.random().toString(36).slice(2,8).toUpperCase();
-        location.hash = id;
+    function toggleShare() {
+      if (viewer.src.includes('?room=')) {
+        // Stop
+        viewer.src = 'https://vdo.ninja/?room=START';
+        status.innerText = 'Stopped';
+        shareBtn.innerText = '📱 SHARE WINDOW';
+        location.hash = '';
+      } else {
+        // Start
+        roomId = Math.random().toString(36).slice(2,8).toUpperCase();
+        location.hash = roomId;
+        viewer.src = `https://vdo.ninja/?room=${roomId}`;
+        status.innerText = `✅ LIVE! Phone: vdo.ninja/?room=${roomId} or tarnish.lol/screen#${roomId}`;
+        shareBtn.innerText = '🔴 Stop Share';
       }
-      return id;
     }
     
-    roomId = getRoomId();
-    roomCode.textContent = roomId;
-    
-    // Init PeerJS first
-    peer = new Peer({ host: 'peerjs.com', port: 443, path: '/peerjs' });
-    
-    peer.on('open', (id) => {
-      console.log('Peer ready:', id);
-      modeIndicator.textContent = `Peer: ${id.slice(0,8)}...`;
-    });
-    
-    // HOST MODE: Share button
-    shareBtn.onclick = async () => {
-      if (isHost) {
-        stopShare();
-        return;
-      }
-      
-      try {
-        isHost = true;
-        modeIndicator.textContent = '🖥️ HOST MODE';
-        status.innerText = `✅ Sharing room ${roomId} - Phone: tarnish.lol/screen#${roomId}`;
-        shareBtn.textContent = '🔴 Stop Share';
-        shareBtn.style.background = 'linear-gradient(45deg,#ff4444,#cc0000)';
-        
-        // Native window picker
-        localStream = await navigator.mediaDevices.getDisplayMedia({
-          video: { cursor: 'always', displaySurface: 'window' },
-          audio: false
-        });
-        
-        localVideo.srcObject = localStream;
-        
-        // Call all connected peers (viewers)
-        peer.on('connection', (conn) => {
-          conn.on('open', () => {
-            const call = peer.call(roomId, localStream);
-            call.on('stream', (remoteStream) => {
-              if (remoteVideo.srcObject !== remoteStream) {
-                remoteVideo.srcObject = remoteStream;
-              }
-            });
-          });
-        });
-        
-        // Answer incoming calls from viewers
-        peer.on('call', (call) => {
-          call.answer(localStream);
-          call.on('stream', (remoteStream) => {
-            remoteVideo.srcObject = remoteStream;
-          });
-        });
-        
-      } catch(e) {
-        status.innerText = '❌ ' + e.name;
-        isHost = false;
-        shareBtn.textContent = '📱 SHARE WINDOW';
-      }
-    };
-    
-    // VIEWER MODE: Auto-watch host
-    if (!location.search.includes('host')) {
-      modeIndicator.textContent = '📱 VIEWER MODE';
-      status.innerText = `Waiting for host in ${roomId}...`;
-      
-      // Call the host peer
-      let callMade = false;
-      peer.on('open', () => {
-        if (!callMade) {
-          callMade = true;
-          const call = peer.call(roomId, new MediaStream());  // Empty stream for viewer
-          call.on('stream', (remoteStream) => {
-            remoteVideo.srcObject = remoteStream;
-            status.innerText = `✅ Live G HUB! Room: ${roomId}`;
-            modeIndicator.textContent = '✅ CONNECTED';
-          });
-          call.on('close', () => {
-            status.innerText = '❌ Host disconnected';
-          });
-        }
-      });
+    // Auto-load room if provided
+    if (roomId !== 'START') {
+      viewer.src = `https://vdo.ninja/?room=${roomId}`;
+      status.innerText = `Viewer mode: room ${roomId}`;
+      shareBtn.style.display = 'none';
     }
-    
-    function stopShare() {
-      if (localStream) localStream.getTracks().forEach(track => track.stop());
-      localVideo.srcObject = null;
-      remoteVideo.srcObject = null;
-      status.innerText = 'Stopped';
-      isHost = false;
-      shareBtn.textContent = '📱 SHARE WINDOW';
-      shareBtn.style.background = 'linear-gradient(45deg,#00ff88,#00cc6a)';
-      shareBtn.onclick = shareBtn.onclick;
-    }
-    
-    // Cleanup on close
-    window.onbeforeunload = () => {
-      if (peer) peer.destroy();
-    };
   </script>
 </body>
 </html>
