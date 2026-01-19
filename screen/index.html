@@ -1,170 +1,123 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🔴 tarnish.lol/screen - Native P2P Window Share</title>
+  <title>📤 tarnish.lol/upload - Neon Thumbnail Uploader</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#0f3460);animation:gradient 8s infinite;color:#00ff88;font-family:'Orbitron',monospace;height:100vh;overflow:hidden;}
     h1{font-size:3em;text-shadow:0 0 30px #00ff88;animation:glow 2s infinite alternate;text-align:center;padding:40px 20px;}
-    #localVideo,#remoteVideo{width:98vw;height:70vh;border:3px solid #00ff88;border-radius:20px;margin:2vw auto;display:none;background:#000;box-shadow:0 0 50px #00ff88;}
-    #remoteVideo{display:block;}
-    button{background:linear-gradient(45deg,#00ff88,#00cc6a);color:#000;border:none;padding:20px 40px;font-size:18px;border-radius:50px;cursor:pointer;font-weight:bold;transition:all 0.3s;box-shadow:0 10px 30px rgba(0,255,136,0.4);margin:10px;}
-    button:hover{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,255,136,0.6);}
+    #dropzone{width:80vw;height:50vh;border:4px dashed #00ff88;border-radius:20px;margin:5vh auto;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,255,136,0.1);transition:all 0.3s;cursor:pointer;}
+    #dropzone.dragover{border-color:#ff0;background:rgba(255,255,0,0.2);}
+    #dropzone:hover{transform:scale(1.02);box-shadow:0 0 50px #00ff88;}
+    #preview{width:300px;height:200px;border-radius:10px;margin:20px auto;display:none;background:#000;}
+    #result{color:#ff0;font-size:1.5em;text-align:center;margin:20px;display:none;}
+    button{background:linear-gradient(45deg,#00ff88,#00cc6a);color:#000;border:none;padding:15px 30px;font-size:16px;border-radius:50px;cursor:pointer;font-weight:bold;transition:all 0.3s;box-shadow:0 10px 30px rgba(0,255,136,0.4);margin:10px;}
+    button:hover{transform:translateY(-3px);box-shadow:0 15px 40px rgba(0,255,136,0.6);}
     button:disabled{opacity:0.5;cursor:not-allowed;}
-    .status{color:#ff0;font-size:1.2em;text-align:center;margin:20px;}
-    .instructions{color:#ffaa00;font-size:1.1em;text-align:center;max-width:800px;margin:0 auto;}
-    #roomInput{display:none;width:200px;padding:10px;margin:10px;border-radius:10px;border:2px solid #00ff88;background:rgba(0,0,0,0.5);color:#00ff88;font-family:inherit;}
+    .status{color:#ffaa00;font-size:1.2em;text-align:center;}
+    input[type=file]{display:none;}
     @keyframes gradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
     @keyframes glow{from{text-shadow:0 0 20px #00ff88}to{text-shadow:0 0 40px #00ff88}}
   </style>
 </head>
 <body>
-  <h1>🔴 tarnish.lol/screen - Native P2P</h1>
-  <div class="instructions">
-    <strong>PC:</strong> Click SHARE → Pick G HUB Lua window → Send room code<br>
-    <strong>Phone:</strong> Enter room code → Watch live P2P!
+  <h1>📤 tarnish.lol/upload</h1>
+  <div class="status">Drag thumbnail here or <label for="fileInput" id="clickLabel" style="color:#00ff88;cursor:pointer;">CLICK TO SELECT</label> (PNG/JPG/GIF)</div>
+  <div id="dropzone">
+    <div>🖼️ Drop image here</div>
+    <div style="font-size:0.8em;margin-top:10px;">Get instant tarnish.lol/img/[hash] for Discord/YouTube</div>
   </div>
+  <img id="preview" />
   <div style="text-align:center;">
-    <button id="shareBtn" onclick="toggleShare()">📱 SHARE WINDOW</button>
-    <input id="roomInput" type="text" placeholder="Enter room code" maxlength="8">
-    <button id="joinBtn" onclick="joinRoom()">👁️ WATCH</button>
-    <div id="status" class="status">Ready to share or join</div>
+    <input type="file" id="fileInput" accept="image/*">
+    <button id="uploadBtn" disabled>🚀 UPLOAD & GET LINK</button>
   </div>
-  <video id="remoteVideo" autoplay playsinline muted></video>
-  <video id="localVideo" autoplay playsinline muted style="position:fixed;bottom:20px;right:20px;width:200px;height:150px;z-index:10;"></video>
+  <div id="result"></div>
 
   <script>
-    const configuration = {
-      iceServers: [
-        {urls: 'stun:stun.l.google.com:19302'},
-        {urls: 'stun:stun1.l.google.com:19302'}
-      ]
+    const API_KEY = '3ca68490b58ac01ccd87b6f8ce6b4e9a'; // Your key inserted [web:61]
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const preview = document.getElementById('preview');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const result = document.getElementById('result');
+    let selectedFile;
+
+    function handleFile(file) {
+      if (file.size > 32 * 1024 * 1024) {
+        alert('Max 32MB');
+        return;
+      }
+      selectedFile = file;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+        uploadBtn.disabled = false;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Click select
+    document.getElementById('clickLabel').onclick = () => fileInput.click();
+    fileInput.onchange = (e) => {
+      if (e.target.files[0]) handleFile(e.target.files[0]);
     };
-    let localStream, peerConnection, roomId, isSharing = false;
-    const localVideo = document.getElementById('localVideo');
-    const remoteVideo = document.getElementById('remoteVideo');
-    const status = document.getElementById('status');
-    const shareBtn = document.getElementById('shareBtn');
-    const joinBtn = document.getElementById('joinBtn');
-    const roomInput = document.getElementById('roomInput');
 
-    const signalingServer = 'https://signalmaster.simplewebrtc.com:443'; // Public simplewebrtc signalmaster [web:33]
-
-    function toggleShare() {
-      if (isSharing) {
-        stopSharing();
-      } else {
-        startSharing();
-      }
+    // Drag & drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+      dropzone.addEventListener(event, preventDefaults, false);
+    });
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
+    ['dragenter', 'dragover'].forEach(event => {
+      dropzone.addEventListener(event, () => dropzone.classList.add('dragover'), false);
+    });
+    ['dragleave', 'drop'].forEach(event => {
+      dropzone.addEventListener(event, () => dropzone.classList.remove('dragover'), false);
+    });
+    dropzone.addEventListener('drop', (e) => {
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) handleFile(file);
+    });
 
-    async function startSharing() {
+    // Upload to ImgBB
+    uploadBtn.onclick = async () => {
+      if (!selectedFile) return;
+      uploadBtn.disabled = true;
+      uploadBtn.innerText = '⏳ UPLOADING...';
+
+      const formData = new FormData();
+      formData.append('key', API_KEY);
+      formData.append('image', selectedFile);
+      formData.append('expiration', 0); // Permanent
+
       try {
-        roomId = Math.random().toString(36).slice(2,8).toUpperCase();
-        localStream = await navigator.mediaDevices.getDisplayMedia({video: true, audio: true});
-        localVideo.srcObject = localStream;
-        localVideo.style.display = 'block';
-        setupPeerConnection(true);
-        status.innerText = `✅ LIVE! Room: ${roomId} (share on phone)`;
-        shareBtn.innerText = '🔴 Stop Share';
-        shareBtn.disabled = false;
-        roomInput.style.display = 'inline-block';
-        isSharing = true;
+        const res = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+          const shortLink = `https://tarnish.lol/img/${data.data.id}`;
+          result.innerHTML = `
+            <strong>✅ ${shortLink}</strong><br><br>
+            <img src="${data.data.url}" style="max-width:300px;border-radius:10px;box-shadow:0 0 20px #00ff88;"><br><br>
+            <small>Full: ${data.data.url} | Thumb: ${data.data.thumb.url}</small><br><br>
+            <button onclick="navigator.clipboard.writeText('${shortLink}').then(()=>alert('Copied! 📋'))">📋 COPY tarnish.lol LINK</button>
+            <button onclick="navigator.clipboard.writeText('${data.data.url}').then(()=>alert('Copied! 📋'))">📋 COPY DIRECT LINK</button>
+          `;
+          result.style.display = 'block';
+        } else {
+          throw new Error(data.error?.message || 'Upload failed');
+        }
       } catch (err) {
-        status.innerText = `Error: ${err.message}`;
+        result.innerHTML = `❌ ${err.message}`;
+        result.style.color = '#ff4444';
+        result.style.display = 'block';
       }
-    }
-
-    function stopSharing() {
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-        localStream = null;
-      }
-      if (peerConnection) {
-        peerConnection.close();
-        peerConnection = null;
-      }
-      localVideo.srcObject = null;
-      localVideo.style.display = 'none';
-      remoteVideo.srcObject = null;
-      status.innerText = 'Stopped';
-      shareBtn.innerText = '📱 SHARE WINDOW';
-      isSharing = false;
-      roomInput.style.display = 'none';
-    }
-
-    function joinRoom() {
-      roomId = roomInput.value.toUpperCase();
-      if (!roomId) return;
-      setupPeerConnection(false);
-      status.innerText = `Joining room ${roomId}...`;
-    }
-
-    function setupPeerConnection(isSender) {
-      peerConnection = new RTCPeerConnection(configuration);
-      peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          sendSignal({candidate: event.candidate});
-        }
-      };
-      peerConnection.ontrack = (event) => {
-        remoteVideo.srcObject = event.streams[0];
-        status.innerText = `✅ Connected to ${roomId}`;
-      };
-
-      if (isSender && localStream) {
-        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-        createOffer();
-      }
-
-      connectSignaling();
-    }
-
-    async function createOffer() {
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-      sendSignal({sdp: peerConnection.localDescription});
-    }
-
-    async function handleSignal(msg) {
-      if (msg.sdp) {
-        await peerConnection.setRemoteDescription(new RTCSessionDescription(msg.sdp));
-        if (msg.sdp.type === 'offer') {
-          const answer = await peerConnection.createAnswer();
-          await peerConnection.setLocalDescription(answer);
-          sendSignal({sdp: peerConnection.localDescription});
-        }
-      } else if (msg.candidate) {
-        await peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate));
-      }
-    }
-
-    function connectSignaling() {
-      const socket = io(signalingServer);
-      socket.emit('room', roomId);
-      socket.on('message', handleSignal);
-      peerConnection.onsignalingstatechange = () => {
-        if (peerConnection.signalingState === 'stable') socket.disconnect();
-      };
-    }
-
-    function sendSignal(msg) {
-      // In full impl, send via socket to room peers; simplified for simplewebrtc room broadcast
-      // Note: This public server broadcasts to room; assumes 1:1 for your use case [web:30]
-      const socket = io(signalingServer);
-      socket.emit('room', roomId);
-      socket.emit('message', msg);
-      socket.disconnect();
-    }
-
-    // Auto-join if hash present
-    const hashRoom = location.hash.slice(1);
-    if (hashRoom) {
-      roomInput.value = hashRoom;
-      joinBtn.click();
-      shareBtn.style.display = 'none';
-    }
+      uploadBtn.disabled = false;
+      uploadBtn.innerText = '🚀 UPLOAD AGAIN';
+    };
   </script>
-  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </body>
 </html>
