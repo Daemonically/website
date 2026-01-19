@@ -2,6 +2,7 @@
 <html>
 <head>
   <title>🔗 tarnish.lol/share - File Sharer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#0f3460);animation:gradient 8s infinite;color:#00ff88;font-family:'Orbitron',monospace;min-height:100vh;}
@@ -29,11 +30,11 @@
 </head>
 <body>
   <h1>🔗 tarnish.lol/share</h1>
-  <div class="status">Drag ANY file or <label for="fileInput" style="color:#00ff88;border-bottom:2px solid #00ff88;cursor:pointer;">CLICK TO SELECT</label> (Up to 5GB free)</div>
+  <div class="status">Drag ANY file or <label for="fileInput" style="color:#00ff88;border-bottom:2px solid #00ff88;cursor:pointer;">CLICK TO SELECT</label> (Up to 2GB free)</div>
   
   <div id="dropzone">
     <div>📁 Drop files here</div>
-    <div style="font-size:1em;margin-top:15px;color:#ffaa00;">ZIP/Videos/Games → Shareable link in seconds</div>
+    <div style="font-size:1em;margin-top:15px;color:#ffaa00;">ZIP/Videos/Games → One-time shareable link</div>
   </div>
   
   <div id="progress" class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
@@ -46,7 +47,6 @@
   <div id="result"></div>
 
   <script>
-    
     const dropzone = document.getElementById('dropzone');
     const fileInput = document.getElementById('fileInput');
     const uploadBtn = document.getElementById('uploadBtn');
@@ -59,14 +59,23 @@
       document.querySelector('.status').innerText = msg;
     }
 
+    async function zipFiles(files) {
+      const zip = new JSZip();
+      for (const file of files) {
+        zip.file(file.name, file);
+      }
+      const zipBlob = await zip.generateAsync({type: 'blob'});
+      return new File([zipBlob], files.length > 1 ? 'files.zip' : files[0].name, {type: 'application/zip'});
+    }
+
     function handleFiles(selectedFiles) {
       files = Array.from(selectedFiles);
       const totalSize = files.reduce((sum, f) => sum + f.size, 0);
-      if (totalSize > 5 * 1024 * 1024 * 1024) return updateStatus('Too big! Max 5GB');
-      updateStatus(`${files.length} files (${(totalSize/1024/1024).toFixed(1)}MB) ready`);
+      if (totalSize > 2 * 1024 * 1024 * 1024) return updateStatus('Too big! Max 2GB');
+      const fileText = files.length > 1 ? `${files.length} files` : files[0].name;
+      updateStatus(`${fileText} (${(totalSize/1024/1024).toFixed(1)}MB) ready`);
       uploadBtn.disabled = false;
     }
-
 
     document.querySelector('label').onclick = () => fileInput.click();
     fileInput.onchange = e => handleFiles(e.target.files);
@@ -78,35 +87,42 @@
       handleFiles(e.dataTransfer.files);
     });
 
-    
     uploadBtn.onclick = async () => {
       uploadBtn.disabled = true;
       progress.style.display = 'block';
-      updateStatus('Uploading...');
+      updateStatus('Preparing & Uploading...');
+      let progressInterval;
 
       try {
-        const formData = new FormData();
-        files.forEach(file => formData.append('files[]', file));
+        let uploadFile = files[0];
+        if (files.length > 1) {
+          updateStatus('Zipping files...');
+          uploadFile = await zipFiles(files);
+        }
 
-        const res = await fetch('https://api.transfernow.net/v2/files', {
+        const formData = new FormData();
+        formData.append('file', uploadFile);
+
+        const res = await fetch('https://file.io', {
           method: 'POST',
           body: formData
         });
         const data = await res.json();
 
-        if (data.url) {
-          const shareLink = `https://tarnish.lol/share/${data.id || btoa(data.url).slice(0,8)}`;
+        if (data.success && data.link) {
+          const shareLink = `https://tarnish.lol/share/${data.link.split('/').pop()}`;
+          const fileInfo = files.length > 1 ? 'All files (zipped)' : `${files[0].name} (${(files[0].size/1024/1024).toFixed(1)}MB)`;
           result.innerHTML = `
-            <div id="result">
+            <div>
               <h3>✅ Files Shared!</h3>
-              <div style="font-size:1.2em;color:#ffaa00;margin-bottom:20px;">Download expires in 7 days (5GB free)</div>
-              <a href="${data.url}" class="share-link" target="_blank">${shareLink}</a>
+              <div style="font-size:1.2em;color:#ffaa00;margin-bottom:20px;">One-time download (deletes after 1 use, expires ${data.expiry || '14 days'})</div>
+              <a href="${data.link}" class="share-link" target="_blank">${shareLink}</a>
               <button class="copy-btn" onclick="navigator.clipboard.writeText('${shareLink}').then(()=>this.innerText='✅ COPIED!')">📋 COPY SHARE LINK</button>
-              <div class="file-info">${files.map(f=>`${f.name} (${(f.size/1024/1024).toFixed(1)}MB)`).join(', ')}</div>
+              <div class="file-info">${fileInfo}</div>
             </div>
           `;
         } else {
-          throw new Error('No download link');
+          throw new Error(data.status || 'Upload failed');
         }
       } catch (err) {
         updateStatus(`Error: ${err.message} - Try again`);
