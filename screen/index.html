@@ -1,61 +1,170 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🔴 tarnish.lol/screen - Native Window Share</title>
+  <title>🔴 tarnish.lol/screen - Native P2P Window Share</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#0f3460);animation:gradient 8s infinite;color:#00ff88;font-family:'Orbitron',monospace;height:100vh;overflow:hidden;}
     h1{font-size:3em;text-shadow:0 0 30px #00ff88;animation:glow 2s infinite alternate;text-align:center;padding:40px 20px;}
-    #viewer{width:98vw;height:70vh;border:3px solid #00ff88;border-radius:20px;margin:2vw auto;display:block;background:#000;box-shadow:0 0 50px #00ff88;}
-    button{background:linear-gradient(45deg,#00ff88,#00cc6a);color:#000;border:none;padding:20px 40px;font-size:18px;border-radius:50px;cursor:pointer;font-weight:bold;transition:all 0.3s;box-shadow:0 10px 30px rgba(0,255,136,0.4);}
+    #localVideo,#remoteVideo{width:98vw;height:70vh;border:3px solid #00ff88;border-radius:20px;margin:2vw auto;display:none;background:#000;box-shadow:0 0 50px #00ff88;}
+    #remoteVideo{display:block;}
+    button{background:linear-gradient(45deg,#00ff88,#00cc6a);color:#000;border:none;padding:20px 40px;font-size:18px;border-radius:50px;cursor:pointer;font-weight:bold;transition:all 0.3s;box-shadow:0 10px 30px rgba(0,255,136,0.4);margin:10px;}
     button:hover{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,255,136,0.6);}
+    button:disabled{opacity:0.5;cursor:not-allowed;}
     .status{color:#ff0;font-size:1.2em;text-align:center;margin:20px;}
     .instructions{color:#ffaa00;font-size:1.1em;text-align:center;max-width:800px;margin:0 auto;}
+    #roomInput{display:none;width:200px;padding:10px;margin:10px;border-radius:10px;border:2px solid #00ff88;background:rgba(0,0,0,0.5);color:#00ff88;font-family:inherit;}
     @keyframes gradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
     @keyframes glow{from{text-shadow:0 0 20px #00ff88}to{text-shadow:0 0 40px #00ff88}}
   </style>
 </head>
 <body>
-  <h1>🔴 tarnish.lol/screen</h1>
+  <h1>🔴 tarnish.lol/screen - Native P2P</h1>
   <div class="instructions">
-    <strong>PC:</strong> Click SHARE → Pick G HUB Lua → Send room code<br>
-    <strong>Phone:</strong> Enter room code → Watch live!
+    <strong>PC:</strong> Click SHARE → Pick G HUB Lua window → Send room code<br>
+    <strong>Phone:</strong> Enter room code → Watch live P2P!
   </div>
   <div style="text-align:center;">
     <button id="shareBtn" onclick="toggleShare()">📱 SHARE WINDOW</button>
-    <div id="status" class="status">Room code appears after share</div>
+    <input id="roomInput" type="text" placeholder="Enter room code" maxlength="8">
+    <button id="joinBtn" onclick="joinRoom()">👁️ WATCH</button>
+    <div id="status" class="status">Ready to share or join</div>
   </div>
-  <iframe id="viewer" src="https://vdo.ninja/?room=START"></iframe>
+  <video id="remoteVideo" autoplay playsinline muted></video>
+  <video id="localVideo" autoplay playsinline muted style="position:fixed;bottom:20px;right:20px;width:200px;height:150px;z-index:10;"></video>
 
   <script>
-    const viewer = document.getElementById('viewer');
+    const configuration = {
+      iceServers: [
+        {urls: 'stun:stun.l.google.com:19302'},
+        {urls: 'stun:stun1.l.google.com:19302'}
+      ]
+    };
+    let localStream, peerConnection, roomId, isSharing = false;
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
     const status = document.getElementById('status');
     const shareBtn = document.getElementById('shareBtn');
-    let roomId = location.hash.slice(1) || 'TARNISH';
-    
+    const joinBtn = document.getElementById('joinBtn');
+    const roomInput = document.getElementById('roomInput');
+
+    const signalingServer = 'https://signalmaster.simplewebrtc.com:443'; // Public simplewebrtc signalmaster [web:33]
+
     function toggleShare() {
-      if (viewer.src.includes('?room=')) {
-        // Stop
-        viewer.src = 'https://vdo.ninja/?room=START';
-        status.innerText = 'Stopped';
-        shareBtn.innerText = '📱 SHARE WINDOW';
-        location.hash = '';
+      if (isSharing) {
+        stopSharing();
       } else {
-        // Start
-        roomId = Math.random().toString(36).slice(2,8).toUpperCase();
-        location.hash = roomId;
-        viewer.src = `https://vdo.ninja/?room=${roomId}`;
-        status.innerText = `✅ LIVE! Phone: vdo.ninja/?room=${roomId} or tarnish.lol/screen#${roomId}`;
-        shareBtn.innerText = '🔴 Stop Share';
+        startSharing();
       }
     }
-    
-    // Auto-load room if provided
-    if (roomId !== 'START') {
-      viewer.src = `https://vdo.ninja/?room=${roomId}`;
-      status.innerText = `Viewer mode: room ${roomId}`;
+
+    async function startSharing() {
+      try {
+        roomId = Math.random().toString(36).slice(2,8).toUpperCase();
+        localStream = await navigator.mediaDevices.getDisplayMedia({video: true, audio: true});
+        localVideo.srcObject = localStream;
+        localVideo.style.display = 'block';
+        setupPeerConnection(true);
+        status.innerText = `✅ LIVE! Room: ${roomId} (share on phone)`;
+        shareBtn.innerText = '🔴 Stop Share';
+        shareBtn.disabled = false;
+        roomInput.style.display = 'inline-block';
+        isSharing = true;
+      } catch (err) {
+        status.innerText = `Error: ${err.message}`;
+      }
+    }
+
+    function stopSharing() {
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+      }
+      if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+      }
+      localVideo.srcObject = null;
+      localVideo.style.display = 'none';
+      remoteVideo.srcObject = null;
+      status.innerText = 'Stopped';
+      shareBtn.innerText = '📱 SHARE WINDOW';
+      isSharing = false;
+      roomInput.style.display = 'none';
+    }
+
+    function joinRoom() {
+      roomId = roomInput.value.toUpperCase();
+      if (!roomId) return;
+      setupPeerConnection(false);
+      status.innerText = `Joining room ${roomId}...`;
+    }
+
+    function setupPeerConnection(isSender) {
+      peerConnection = new RTCPeerConnection(configuration);
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          sendSignal({candidate: event.candidate});
+        }
+      };
+      peerConnection.ontrack = (event) => {
+        remoteVideo.srcObject = event.streams[0];
+        status.innerText = `✅ Connected to ${roomId}`;
+      };
+
+      if (isSender && localStream) {
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+        createOffer();
+      }
+
+      connectSignaling();
+    }
+
+    async function createOffer() {
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      sendSignal({sdp: peerConnection.localDescription});
+    }
+
+    async function handleSignal(msg) {
+      if (msg.sdp) {
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+        if (msg.sdp.type === 'offer') {
+          const answer = await peerConnection.createAnswer();
+          await peerConnection.setLocalDescription(answer);
+          sendSignal({sdp: peerConnection.localDescription});
+        }
+      } else if (msg.candidate) {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate));
+      }
+    }
+
+    function connectSignaling() {
+      const socket = io(signalingServer);
+      socket.emit('room', roomId);
+      socket.on('message', handleSignal);
+      peerConnection.onsignalingstatechange = () => {
+        if (peerConnection.signalingState === 'stable') socket.disconnect();
+      };
+    }
+
+    function sendSignal(msg) {
+      // In full impl, send via socket to room peers; simplified for simplewebrtc room broadcast
+      // Note: This public server broadcasts to room; assumes 1:1 for your use case [web:30]
+      const socket = io(signalingServer);
+      socket.emit('room', roomId);
+      socket.emit('message', msg);
+      socket.disconnect();
+    }
+
+    // Auto-join if hash present
+    const hashRoom = location.hash.slice(1);
+    if (hashRoom) {
+      roomInput.value = hashRoom;
+      joinBtn.click();
       shareBtn.style.display = 'none';
     }
   </script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </body>
 </html>
