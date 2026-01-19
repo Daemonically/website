@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>🔴 tarnish.lol/screen - Live Window Share</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#0f3460);background-size:400% 400%;animation:gradient 8s infinite;color:#00ff88;font-family:'Orbitron',monospace;height:100vh;overflow:hidden;}
+    h1{font-size:3em;text-shadow:0 0 30px #00ff88;animation:glow 2s infinite alternate;text-align:center;padding:50px 20px;}
+    #viewer{width:100vw;height:calc(100vh - 200px);border:3px solid #00ff88;border-radius:20px;margin:20px auto;display:block;box-shadow:0 0 50px #00ff88;}
+    .room{text-align:center;font-size:1.5em;margin:20px;}
+    input{background:rgba(0,255,136,0.2);border:2px solid #00ff88;color:#00ff88;padding:15px;font-size:18px;width:300px;border-radius:25px;}
+    button{background:#00ff88;color:#000;border:none;padding:15px 30px;font-size:18px;border-radius:25px;cursor:pointer;font-weight:bold;margin:10px;}
+    @keyframes gradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+    @keyframes glow{from{text-shadow:0 0 20px #00ff88}to{text-shadow:0 0 40px #00ff88}}
+  </style>
+</head>
+<body>
+  <h1>🔴 tarnish.lol/screen</h1>
+  <div class="room">
+    <input id="room" placeholder="Enter room name (ex: 1234)" value="lua">
+    <br><button onclick="joinRoom()">👁️ Watch Stream</button>
+    <br><small>Share this link: <span id="sharelink"></span></small>
+  </div>
+  <iframe id="viewer" src="https://vdo.ninja/?view=lua"></iframe>
+
+  <script>
+    function joinRoom() {
+      const room = document.getElementById('room').value;
+      const url = `https://vdo.ninja/?view=${room}`;
+      document.getElementById('viewer').src = url;
+      document.getElementById('sharelink').textContent = `tarnish.lol/screen?room=${room}`;
+    }
+    
+  
+    const params = new URLSearchParams(location.search);
+    if (params.get('room')) {
+      document.getElementById('room').value = params.get('room');
+      joinRoom();
+    }
+  </script>
+</body>
+</html>
