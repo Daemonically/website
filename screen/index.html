@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🔴 tarnish.lol/screen - Native Window Share</title>
+  <title>🔴 tarnish.lol/screen - Native Window Share (P2P)</title>
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#0f3460);animation:gradient 8s infinite;color:#00ff88;font-family:'Orbitron',monospace;height:100vh;overflow:hidden;}
@@ -11,25 +12,44 @@
     button:hover{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,255,136,0.6);}
     button:disabled{background:#666;transform:none;cursor:not-allowed;}
     .status{color:#ff0;font-size:1.2em;text-align:center;margin:20px;}
+    #roomCode{font-size:1.5em;background:#000;border:2px solid #ff0;padding:10px;border-radius:10px;}
     @keyframes gradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
     @keyframes glow{from{text-shadow:0 0 20px #00ff88}to{text-shadow:0 0 40px #00ff88}}
   </style>
 </head>
 <body>
-  <h1>🔴 tarnish.lol/screen</h1>
+  <h1>🔴 tarnish.lol/screen (P2P)</h1>
   <div style="text-align:center;">
-    <button id="shareBtn">📱 SHARE WINDOW (G HUB Lua)</button>
-    <div id="status" class="status">Click to start sharing</div>
+    <button id="shareBtn">📱 SHARE WINDOW (Pick an app)</button>
+    <div id="status" class="status">Click to start sharing. Enter room code on phone.</div>
+    <div id="roomCode"></div>
   </div>
   <video id="localVideo" autoplay muted playsinline></video>
   <video id="remoteVideo" autoplay playsinline></video>
 
   <script>
-    let localStream;
+    let localStream, peer, currentCall, roomId;
     
-    document.getElementById('shareBtn').onclick = async () => {
+    const shareBtn = document.getElementById('shareBtn');
+    const status = document.getElementById('status');
+    const roomCode = document.getElementById('roomCode');
+    const localVideo = document.getElementById('localVideo');
+    const remoteVideo = document.getElementById('remoteVideo');
+    
+    // Generate or get room ID from URL/hash
+    function getRoomId() {
+      let id = location.hash.slice(1) || Math.random().toString(36).slice(2,8).toUpperCase();
+      location.hash = id;
+      return id;
+    }
+    
+    shareBtn.onclick = async () => {
       try {
-        // NATIVE "Select Application" popup!
+        roomId = getRoomId();
+        roomCode.textContent = roomId;
+        status.innerText = `✅ Room: ${roomId} - Share link on phone!`;
+        
+        // Native window picker
         localStream = await navigator.mediaDevices.getDisplayMedia({
           video: { 
             cursor: 'always',
@@ -38,23 +58,66 @@
           audio: false
         });
         
-        document.getElementById('localVideo').srcObject = localStream;
-        document.getElementById('status').innerText = '✅ Live! Share: tarnish.lol/screen#' + Math.random().toString(36).slice(2,8);
-        document.getElementById('shareBtn').textContent = '🔴 Stop Share';
-        document.getElementById('shareBtn').onclick = stopShare;
+        localVideo.srcObject = localStream;
+        shareBtn.textContent = '🔴 Stop Share';
+        shareBtn.onclick = stopShare;
+        
+        // Init PeerJS
+        peer = new Peer(roomId, { host: 'peerjs.com', port: 443, path: '/peerjs' });
+        
+        peer.on('open', (id) => {
+          console.log('Peer ID:', id);
+        });
+        
+        // Answer incoming calls (viewer connecting)
+        peer.on('call', (call) => {
+          currentCall = call;
+          call.answer(localStream);
+          call.on('stream', (remoteStream) => {
+            remoteVideo.srcObject = remoteStream;
+            status.innerText = `✅ Live P2P with viewer! Room: ${roomId}`;
+          });
+        });
         
       } catch(e) {
-        document.getElementById('status').innerText = '❌ Share blocked: ' + e.name;
+        status.innerText = '❌ Share blocked: ' + e.name;
       }
     };
     
     function stopShare() {
-      localStream.getTracks().forEach(track => track.stop());
-      document.getElementById('localVideo').srcObject = null;
-      document.getElementById('status').innerText = 'Stopped';
-      document.getElementById('shareBtn').textContent = '📱 SHARE WINDOW';
-      document.getElementById('shareBtn').onclick = document.getElementById('shareBtn').onclick;
+      if (localStream) localStream.getTracks().forEach(track => track.stop());
+      if (currentCall) currentCall.close();
+      if (peer) peer.destroy();
+      localVideo.srcObject = null;
+      remoteVideo.srcObject = null;
+      status.innerText = 'Stopped';
+      roomCode.textContent = '';
+      shareBtn.textContent = '📱 SHARE WINDOW';
+      shareBtn.onclick = shareBtn.onclick;
+    }
+    
+    
+    if (!shareBtn.onclick || location.hash) {
+      roomId = getRoomId();
+      roomCode.textContent = roomId;
+      status.innerText = `Waiting for host in room ${roomId}...`;
+      
+      peer = new Peer({ host: 'peerjs.com', port: 443, path: '/peerjs' });
+      
+      peer.on('open', (id) => {
+        console.log('Viewer Peer ID:', id);
+        
+        navigator.mediaDevices.getDisplayMedia({video: true}).catch(() => {
+       
+        }).then(() => {
+          const call = peer.call(roomId, localStream || new MediaStream());
+          call.on('stream', (remoteStream) => {
+            remoteVideo.srcObject = remoteStream;
+            status.innerText = `✅ Viewing live stream! Room: ${roomId}`;
+          });
+        });
+      });
     }
   </script>
 </body>
-</html>[web:592]
+</html>
