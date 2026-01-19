@@ -1,42 +1,60 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🔴 tarnish.lol/screen - Live Window Share</title>
+  <title>🔴 tarnish.lol/screen - Native Window Share</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
-    body{background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#0f3460);background-size:400% 400%;animation:gradient 8s infinite;color:#00ff88;font-family:'Orbitron',monospace;height:100vh;overflow:hidden;}
-    h1{font-size:3em;text-shadow:0 0 30px #00ff88;animation:glow 2s infinite alternate;text-align:center;padding:50px 20px;}
-    #viewer{width:100vw;height:calc(100vh - 200px);border:3px solid #00ff88;border-radius:20px;margin:20px auto;display:block;box-shadow:0 0 50px #00ff88;}
-    .room{text-align:center;font-size:1.5em;margin:20px;}
-    input{background:rgba(0,255,136,0.2);border:2px solid #00ff88;color:#00ff88;padding:15px;font-size:18px;width:300px;border-radius:25px;}
-    button{background:#00ff88;color:#000;border:none;padding:15px 30px;font-size:18px;border-radius:25px;cursor:pointer;font-weight:bold;margin:10px;}
+    body{background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#0f3460);animation:gradient 8s infinite;color:#00ff88;font-family:'Orbitron',monospace;height:100vh;overflow:hidden;}
+    h1{font-size:3em;text-shadow:0 0 30px #00ff88;animation:glow 2s infinite alternate;text-align:center;padding:40px 20px;}
+    #localVideo,#remoteVideo{width:48vw;height:45vh;border:3px solid #00ff88;border-radius:20px;margin:1vw;display:inline-block;background:#000;box-shadow:0 0 50px #00ff88;}
+    button{background:linear-gradient(45deg,#00ff88,#00cc6a);color:#000;border:none;padding:20px 40px;font-size:18px;border-radius:50px;cursor:pointer;font-weight:bold;transition:all 0.3s;box-shadow:0 10px 30px rgba(0,255,136,0.4);}
+    button:hover{transform:translateY(-5px);box-shadow:0 20px 40px rgba(0,255,136,0.6);}
+    button:disabled{background:#666;transform:none;cursor:not-allowed;}
+    .status{color:#ff0;font-size:1.2em;text-align:center;margin:20px;}
     @keyframes gradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
     @keyframes glow{from{text-shadow:0 0 20px #00ff88}to{text-shadow:0 0 40px #00ff88}}
   </style>
 </head>
 <body>
   <h1>🔴 tarnish.lol/screen</h1>
-  <div class="room">
-    <input id="room" placeholder="Enter room name (ex: 1234)" value="lua">
-    <br><button onclick="joinRoom()">👁️ Watch Stream</button>
-    <br><small>Share this link: <span id="sharelink"></span></small>
+  <div style="text-align:center;">
+    <button id="shareBtn">📱 SHARE WINDOW (G HUB Lua)</button>
+    <div id="status" class="status">Click to start sharing</div>
   </div>
-  <iframe id="viewer" src="https://vdo.ninja/?view=lua"></iframe>
+  <video id="localVideo" autoplay muted playsinline></video>
+  <video id="remoteVideo" autoplay playsinline></video>
 
   <script>
-    function joinRoom() {
-      const room = document.getElementById('room').value;
-      const url = `https://vdo.ninja/?view=${room}`;
-      document.getElementById('viewer').src = url;
-      document.getElementById('sharelink').textContent = `tarnish.lol/screen?room=${room}`;
-    }
+    let localStream;
     
-  
-    const params = new URLSearchParams(location.search);
-    if (params.get('room')) {
-      document.getElementById('room').value = params.get('room');
-      joinRoom();
+    document.getElementById('shareBtn').onclick = async () => {
+      try {
+        // NATIVE "Select Application" popup!
+        localStream = await navigator.mediaDevices.getDisplayMedia({
+          video: { 
+            cursor: 'always',
+            displaySurface: 'window'  // Prefer single windows
+          },
+          audio: false
+        });
+        
+        document.getElementById('localVideo').srcObject = localStream;
+        document.getElementById('status').innerText = '✅ Live! Share: tarnish.lol/screen#' + Math.random().toString(36).slice(2,8);
+        document.getElementById('shareBtn').textContent = '🔴 Stop Share';
+        document.getElementById('shareBtn').onclick = stopShare;
+        
+      } catch(e) {
+        document.getElementById('status').innerText = '❌ Share blocked: ' + e.name;
+      }
+    };
+    
+    function stopShare() {
+      localStream.getTracks().forEach(track => track.stop());
+      document.getElementById('localVideo').srcObject = null;
+      document.getElementById('status').innerText = 'Stopped';
+      document.getElementById('shareBtn').textContent = '📱 SHARE WINDOW';
+      document.getElementById('shareBtn').onclick = document.getElementById('shareBtn').onclick;
     }
   </script>
 </body>
-</html>
+</html>[web:592]
