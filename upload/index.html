@@ -1,29 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>🔗 tarnish.lol/share - File Sharer</title>
+  <title>🔗 tarnish.lol/share - File Sharer (Fixed)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{background:linear-gradient(-45deg,#0f0c29,#302b63,#24243e,#0f3460);animation:gradient 8s infinite;color:#00ff88;font-family:'Orbitron',monospace;min-height:100vh;}
     h1{font-size:3em;text-shadow:0 0 30px #00ff88;animation:glow 2s infinite alternate;text-align:center;padding:30px 20px;}
-    #dropzone{width:90%;max-width:700px;height:400px;border:4px dashed #00ff88;border-radius:25px;margin:30px auto;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,255,136,0.1);transition:all 0.3s;cursor:pointer;font-size:1.3em;}
+    #dropzone{width:90%;max-width:700px;height:400px;border:4px dashed #00ff88;border-radius:25px;margin:30px auto;display:flex;align-items:center;justify-content:center;flex-direction:column;background:rgba(0,255,136,0.1);transition:all 0.3s ease-out;cursor:pointer;font-size:1.3em;backdrop-filter:blur(10px);}
     #dropzone.dragover{border-color:#ff0;background:rgba(255,255,0,0.2);transform:scale(1.02);}
     #dropzone:hover{box-shadow:0 0 60px #00ff88;}
     #result{text-align:center;margin:50px;display:none;}
     #result h3{font-size:2.5em;color:#00ff88;margin-bottom:30px;text-shadow:0 0 30px #00ff88;}
-    .share-link{display:block;font-size:1.8em;font-weight:bold;color:#00ff88;text-decoration:none;padding:25px;border-radius:20px;background:rgba(0,255,136,0.25);margin:30px auto;max-width:600px;border:3px solid #00ff88;transition:all 0.3s;box-shadow:0 0 40px rgba(0,255,136,0.4);}
+    .share-link{display:block;font-size:1.8em;font-weight:bold;color:#00ff88;text-decoration:none;padding:25px;border-radius:20px;background:rgba(0,255,136,0.25);margin:30px auto;max-width:600px;border:3px solid #00ff88;transition:all 0.3s ease-out;box-shadow:0 0 40px rgba(0,255,136,0.4);backdrop-filter:blur(5px);}
     .share-link:hover{color:#ff0;box-shadow:0 0 70px #00ff88;transform:scale(1.05);}
-    .copy-btn{background:linear-gradient(45deg,#00ff88,#00cc6a);color:#000;border:none;padding:20px 50px;font-size:20px;border-radius:50px;cursor:pointer;font-weight:bold;margin:20px auto;display:block;transition:all 0.3s;box-shadow:0 15px 40px rgba(0,255,136,0.5);}
+    .copy-btn{background:linear-gradient(45deg,#00ff88,#00cc6a);color:#000;border:none;padding:20px 50px;font-size:20px;border-radius:50px;cursor:pointer;font-weight:bold;margin:20px auto;display:block;transition:all 0.3s ease-out;box-shadow:0 15px 40px rgba(0,255,136,0.5);}
     .copy-btn:hover{transform:translateY(-5px);box-shadow:0 25px 50px rgba(0,255,136,0.7);}
     .copy-btn:active{transform:translateY(-2px);}
     .file-info{margin:20px 0;color:#ffaa00;font-size:1.2em;}
-    button{background:linear-gradient(45deg,#00ff88,#00cc6a);color:#000;border:none;padding:20px 50px;font-size:18px;border-radius:50px;cursor:pointer;font-weight:bold;transition:all 0.3s;box-shadow:0 15px 40px rgba(0,255,136,0.4);margin:20px auto;display:block;}
+    button{background:linear-gradient(45deg,#00ff88,#00cc6a);color:#000;border:none;padding:20px 50px;font-size:18px;border-radius:50px;cursor:pointer;font-weight:bold;transition:all 0.3s ease-out;box-shadow:0 15px 40px rgba(0,255,136,0.4);margin:20px auto;display:block;}
     button:disabled{opacity:0.5;cursor:not-allowed;}
     .status{color:#ffaa00;font-size:1.3em;text-align:center;padding:20px;}
     input[type=file]{display:none;}
-    .progress-bar{display:none;width:90%;height:10px;background:rgba(0,0,0,0.5);border-radius:10px;margin:20px auto;overflow:hidden;}
-    .progress-fill{height:100%;background:linear-gradient(90deg,#00ff88,#00cc6a);transition:width 0.3s;}
+    .progress-bar{display:none;width:90%;height:10px;background:rgba(0,0,0,0.5);border-radius:10px;margin:20px auto;overflow:hidden;transition:opacity 0.3s ease-out;}
+    .progress-fill{height:100%;background:linear-gradient(90deg,#00ff88,#00cc6a);transition:width 0.3s ease-out !important;will-change:width;}
+    .error-status{color:#ff4444 !important;}
     @keyframes gradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
     @keyframes glow{from{text-shadow:0 0 20px #00ff88}to{text-shadow:0 0 40px #00ff88}}
   </style>
@@ -53,10 +54,13 @@
     const result = document.getElementById('result');
     const progress = document.getElementById('progress');
     const progressFill = document.getElementById('progressFill');
+    const statusEl = document.querySelector('.status');
     let files = [];
 
-    function updateStatus(msg) {
-      document.querySelector('.status').innerText = msg;
+    function updateStatus(msg, isError = false) {
+      statusEl.textContent = msg;
+      if (isError) statusEl.classList.add('error-status');
+      else statusEl.classList.remove('error-status');
     }
 
     async function zipFiles(files) {
@@ -64,92 +68,117 @@
       for (const file of files) {
         zip.file(file.name, file);
       }
-      const zipBlob = await zip.generateAsync({type: 'blob'});
-      return new File([zipBlob], files.length > 1 ? 'files.zip' : files[0].name, {type: 'application/zip'});
+      return await zip.generateAsync({type: 'blob'});
     }
 
     function handleFiles(selectedFiles) {
       files = Array.from(selectedFiles);
       const totalSize = files.reduce((sum, f) => sum + f.size, 0);
-      if (totalSize > 2 * 1024 * 1024 * 1024) return updateStatus('Too big! Max 2GB');
+      if (totalSize > 2 * 1024 * 1024 * 1024) return updateStatus('Too big! Max 2GB', true);
       const fileText = files.length > 1 ? `${files.length} files` : files[0].name;
       updateStatus(`${fileText} (${(totalSize/1024/1024).toFixed(1)}MB) ready`);
       uploadBtn.disabled = false;
+      result.style.display = 'none';
     }
 
+    // File selection
     document.querySelector('label').onclick = () => fileInput.click();
     fileInput.onchange = e => handleFiles(e.target.files);
 
     // Drag-drop
     ['dragenter','dragover'].forEach(e => dropzone.addEventListener(e, ev => {ev.preventDefault(); dropzone.classList.add('dragover');}));
-    ['dragleave','drop'].forEach(e => dropzone.addEventListener(e, ev => {ev.preventDefault(); dropzone.classList.remove('dragover');}));
-    dropzone.addEventListener('drop', e => {
-      handleFiles(e.dataTransfer.files);
-    });
+    ['dragleave','drop'].forEach(e => dropzone.addEventListener(e, ev => {ev.preventDefault(); dropzone.classList.remove('dragover'); 
+      if (e === 'drop') handleFiles(ev.dataTransfer.files);
+    }));
 
     uploadBtn.onclick = async () => {
-  uploadBtn.disabled = true;
-  progress.style.display = 'block';
-  progressFill.style.width = '0%';
-  updateStatus('Preparing & Uploading...');
-  let progressInterval;
+      uploadBtn.disabled = true;
+      progress.style.display = 'block';
+      progressFill.style.width = '0%';
+      result.style.display = 'none';
+      let progressInterval;
+      let aborted = false;
 
-  try {
-    // Simulate progress start
-    progressInterval = setInterval(() => {
-      const width = parseInt(progressFill.style.width) || 0;
-      if (width < 90) progressFill.style.width = (width + Math.random() * 15) + '%';
-    }, 200);
+      const abortController = new AbortController();
 
-    let uploadFile = files[0];
-    if (files.length > 1) {
-      updateStatus('Zipping files...');
-      uploadFile = await zipFiles(files);
-    }
+      try {
+        progressInterval = setInterval(() => {
+          let width = parseFloat(progressFill.style.width) || 0;
+          if (width < 85) {
+            progressFill.style.width = Math.min(85, width + 8 + Math.random()*12) + '%';
+          }
+        }, 150);
 
-    const formData = new FormData();
-    formData.append('file', uploadFile);
+        let uploadBlob = files[0];
+        let filename = files[0].name;
+        if (files.length > 1) {
+          updateStatus('Zipping multiple files...');
+          const zipBlob = await zipFiles(files);
+          uploadBlob = zipBlob;
+          filename = 'files.zip';
+        }
 
-    const res = await fetch('https://file.io', {
-      method: 'POST',
-      body: formData
-    });
-    
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`HTTP ${res.status}: ${errorText}`);
-    }
-    
-    const data = await res.json();
+        updateStatus('Uploading to transfer.sh...');
 
-    if (data.success && data.link) {
-      const shareLink = `https://tarnish.lol/share/${data.link.split('/').pop()}`;
+        const formData = new FormData();
+        formData.append('file', uploadBlob, filename);
+
+        // Try transfer.sh first (PUT direct), fallback to file.io
+        let response;
+        try {
+          response = await fetch(`https://transfer.sh/${filename}`, {
+            method: 'PUT',
+            body: uploadBlob,
+            signal: abortController.signal
+          });
+          if (!response.ok) throw new Error('transfer.sh failed');
+        } catch (e) {
+          updateStatus('Trying backup upload...');
+          const fileioRes = await fetch('https://file.io', {
+            method: 'POST',
+            body: formData,
+            signal: abortController.signal
+          });
+          if (!fileioRes.ok) throw new Error('Both uploads failed');
+          const data = await fileioRes.json();
+          if (!data.success || !data.link) throw new Error('Invalid response');
+          const shareLink = `https://tarnish.lol/share/${data.link.split('/').pop()}`;
+          showResult(shareLink, files, data.expiry);
+          return;
+        }
+
+        const shareLink = response.url;
+        showResult(shareLink, files);
+
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error('Upload error:', err);
+          updateStatus(`Upload failed: ${err.message.slice(0,50)}... Check console F12`, true);
+        }
+      } finally {
+        clearInterval(progressInterval);
+        progress.style.opacity = '0';
+        setTimeout(() => { progress.style.display = 'none'; progress.style.opacity = '1'; }, 300);
+        uploadBtn.disabled = false;
+        uploadBtn.innerText = '🚀 NEW SHARE';
+      }
+    };
+
+    function showResult(shareLink, files, expiry) {
       const fileInfo = files.length > 1 ? 'All files (zipped)' : `${files[0].name} (${(files[0].size/1024/1024).toFixed(1)}MB)`;
       result.innerHTML = `
         <div>
           <h3>✅ Files Shared!</h3>
-          <div style="font-size:1.2em;color:#ffaa00;margin-bottom:20px;">One-time download (deletes after 1 use, expires ${data.expiry || '14 days'})</div>
-          <a href="${data.link}" class="share-link" target="_blank">${shareLink}</a>
-          <button class="copy-btn" onclick="navigator.clipboard.writeText('${shareLink}').then(()=>this.innerText='✅ COPIED!')">📋 COPY SHARE LINK</button>
+          <div style="font-size:1.2em;color:#ffaa00;margin-bottom:20px;">One-time download (auto-delete after 1 use/14 days)</div>
+          <a href="${shareLink}" class="share-link" target="_blank">${shareLink}</a>
+          <button class="copy-btn" onclick="navigator.clipboard.writeText('${shareLink}').then(()=>this.innerText='✅ COPIED!').catch(()=>this.innerText='Failed')">📋 COPY LINK</button>
           <div class="file-info">${fileInfo}</div>
+          ${expiry ? `<div style="color:#ffaa00;">Expires: ${expiry}</div>` : ''}
         </div>
       `;
-    } else {
-      throw new Error(data.error || 'Upload failed - invalid response');
+      updateStatus('Upload complete!');
+      result.style.display = 'block';
     }
-  } catch (err) {
-    console.error('Upload error:', err);
-    updateStatus(`Error: ${err.message} - Try again`);
-    // Force hide progress on error
-    progress.style.display = 'none';
-  } finally {
-    clearInterval(progressInterval);
-    result.style.display = 'block';
-    uploadBtn.disabled = false;
-    uploadBtn.innerText = '🚀 NEW SHARE';
-  }
-};
-
   </script>
 </body>
 </html>
