@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#7F73D2">
+  <meta property="og:title" content="tarnish.lol">
+  <meta property="og:description" content="$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$">
+  <meta property="og:image" content="favicon.png">
+  <meta property="og:url" content="https://tarnish.lol">
+  <meta property="og:type" content="website">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="favicon.png">
+  <title>tarnish.lol</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: #060606;
+      color: #fff;
+      font-family: 'Verdana', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* ---- SCROLLING TITLE ---- */
+    /* handled by JS below */
+
+    /* ---- ENTER SCREEN ---- */
+    #enter-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 5000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: #060606;
+      cursor: pointer;
+      transition: opacity 0.5s ease-out;
+    }
+    #enter-screen.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    /* the Windows-style popup card in the center */
+    .tarnish-card {
+      background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAlSURBVChTYxAREfnPw8PzHxeNogCGkfnEmQDDyDph/IF3A89/ABQxTIGh/maWAAAAAElFTkSuQmCC') repeat;
+      border: 1px solid #050505;
+      font-family: 'Verdana', sans-serif;
+      font-size: 13px;
+      color: #cccccc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      position: relative;
+    }
+
+    .card-border-light { border: 1px solid #3c3c3c; padding: 3px; }
+    .card-border-dark  { border: 3px solid #282828; padding: 2px; }
+    .card-border-in    { border: 1px solid #3c3c3c; }
+
+    .rainbow-strip {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 3px;
+      margin-bottom: 8px;
+    }
+    .rainbow-1, .rainbow-2 {
+      height: 1px;
+      width: 100%;
+      background-size: 200% 100%;
+      animation: shimmer 2s linear infinite;
+    }
+    .rainbow-1 {
+      background-image: linear-gradient(to right, #38b0da, #cb46cd, #cce335, #cb46cd, #38b0da);
+    }
+    .rainbow-2 {
+      background-image: linear-gradient(to right, #1d5e74, #6c256d, #6d791c, #6c256d, #1d5e74);
+      animation-delay: 1s;
+    }
+    .rainbow-3 { height: 1px; width: 100%; background: #090909; }
+
+    @keyframes shimmer {
+      0%   { background-position: -100% 50%; }
+      100% { background-position:  100% 50%; }
+    }
+
+    .card-title {
+      font-weight: bold;
+      text-align: center;
+      color: #cccccc;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+
+    .card-links {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .card-btn {
+      border: 1px solid #323232;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 165px;
+      height: 22px;
+      background: linear-gradient(0deg, #191919, #232323);
+      font-weight: 700;
+      text-decoration: none;
+      color: #cccccc;
+      font-size: 13px;
+      font-family: 'Verdana', sans-serif;
+      cursor: pointer;
+    }
+    .card-btn:hover { background: linear-gradient(0deg, #232323, #343434); }
+    .card-btn:active { background: linear-gradient(0deg, #232323, #191919); }
+
+    /* ---- ENTER TEXT (rainbow animated) ---- */
+    #enter-type-in {
+      margin-top: 24px;
+      font-family: monospace;
+      font-size: 16px;
+      background: linear-gradient(45deg, #ff0000, #ff6600, #ffff00, #00ff00, #0066ff, #6600ff, #ff00ff, #ff0000);
+      background-size: 400% 400%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: rainbow 2s linear infinite;
+    }
+    @keyframes rainbow {
+      0%   { background-position: 0% 50%; }
+      100% { background-position: 400% 50%; }
+    }
+
+    /* ---- DOX OVERLAY ---- */
+    #dox {
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
+      pointer-events: none;
+      opacity: 0;
+      display: none;
+    }
+    #dox-bg-vid {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 3100;
+      filter: brightness(0.5);
+    }
+    #dox-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 3200;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    #dox-overlay span {
+      background: linear-gradient(45deg, #ff0000, #ff6600, #ffff00, #00ff00, #0066ff, #6600ff, #ff00ff, #ff0000);
+      background-size: 400% 400%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: rainbow 2s linear infinite;
+      font-family: monospace;
+      display: block;
+      height: 1.2em;
+      line-height: 1.2em;
+      margin: 2px 0;
+    }
+
+
+
+    /* ---- BODY BLUR PULSE ---- */
+    body {
+      animation: blurslowly 15s infinite;
+    }
+    @keyframes blurslowly {
+      0%   { filter: none; }
+      92%  { filter: blur(0); }
+      96%  { filter: blur(1px); }
+      100% { filter: blur(0); }
+    }
+
+    /* links for child window */
+    #main-content { display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- ENTER SCREEN (parent window) -->
+  <div id="enter-screen">
+    <span id="enter-type-in">click to enter...</span>
+  </div>
+
+  <!-- DOX VIDEO OVERLAY -->
+  <div id="dox">
+    <video id="dox-bg-vid" loop playsinline preload="auto" src="video.mp4"></video>
+    <div id="dox-overlay"></div>
+  </div>
+
+  <!-- SCROLLING TITLE SCRIPT -->
+  <script>
+    let msg1 = " | tarnish.lol | ";
+    const speed = 100;
+    function scrollTitle() {
+      document.title = msg1;
+      msg1 = msg1.substring(1) + msg1.charAt(0);
+      setTimeout(scrollTitle, speed);
+    }
+    scrollTitle();
+  </script>
+
+  <!-- BROWSER DETECTOR (from website-main) -->
+  <script>
+  var BrowserDetector=(function(){function defineProperties(target,props){for(var i=0;i<props.length;i++){var descriptor=props[i];descriptor.enumerable=descriptor.enumerable||false;descriptor.configurable=true;if("value"in descriptor){descriptor.writable=true;}Object.defineProperty(target,descriptor.key,descriptor);}}var browserNames={chrome:"Google Chrome",brave:"Brave",crios:"Google Chrome",edge:"Microsoft Edge",edg:"Microsoft Edge",fennec:"Mozilla Firefox",jsdom:"JsDOM",mozilla:"Mozilla Firefox",msie:"Microsoft Internet Explorer",opera:"Opera"};browserNames.opios="Opera";browserNames.opr="Opera";browserNames.rv="Microsoft Internet Explorer";browserNames.safari="Safari";browserNames.samsungbrowser="Samsung Browser";browserNames.electron="Electron";var platformNames={android:"Android",androidTablet:"Android Tablet",cros:"Chrome OS",fennec:"Android Tablet",ipad:"IPad",iphone:"IPhone",jsdom:"JsDOM",linux:"Linux",mac:"Macintosh",tablet:"Android Tablet"};platformNames.win="Windows";platformNames["windows phone"]="Windows Phone";platformNames.xbox="Microsoft Xbox";var BrowserDetector=(function(){function BrowserDetector(userAgent){if(!(this instanceof BrowserDetector)){throw new TypeError("Cannot call a class as a function");}this.userAgent=userAgent||(window.navigator?window.navigator.userAgent:null)||null;}BrowserDetector.prototype.parseUserAgent=function(userAgent){var result={};var ua=userAgent||this.userAgent||'';var lowerCaseUA=ua.toLowerCase().replace(/\s\s+/g," ");var browserMatch=/(edge)\/(\w+)/.exec(lowerCaseUA)||/(edg)[/](\w+)/.exec(lowerCaseUA)||/(chrome)[/](\w+)/.exec(lowerCaseUA)||/(safari)[/](\w+)/.exec(lowerCaseUA)||/(firefox)[/](\w+)/.exec(lowerCaseUA)||/(msie) (\w+)/.exec(lowerCaseUA)||[];var platformMatch=/(ipad)/.exec(lowerCaseUA)||/(iphone)/.exec(lowerCaseUA)||/(win)/.exec(lowerCaseUA)||/(mac)/.exec(lowerCaseUA)||/(linux)/.exec(lowerCaseUA)||[];var browserName=browserMatch[1]||null;var platformName=platformMatch[0]||null;var version=browserMatch[2]||null;if(browserName==='chrome'&&typeof window?.navigator?.brave?.isBrave==='function'){browserName='brave';}if(browserName){result[browserName]=true;}if(platformName){result[platformName]=true;}var isMobile=Boolean(result.android||result.ipad||result.iphone);var isDesktop=Boolean(result.cros||result.mac||result.linux||result.win);return{name:browserNames[browserName]||null,platform:platformNames[platformName]||null,userAgent:ua,version:version,shortVersion:version?parseFloat(version).toString():null,isMobile:isMobile,isDesktop:isDesktop};};return BrowserDetector;}());return BrowserDetector;})();
+  </script>
+
+  <!-- ANTI-DEBUG -->
+  <script>
+  function init(param){function countup(counter){if(typeof counter==="string"){return function(){}.constructor("while(true){}").apply("counter");}else{if((''+counter/counter).length!==1||counter%20===0){(function(){return true;}).constructor("debugger").call("action");}else{(function(){return false;}).constructor("debugger").apply("stateObject");}}countup(++counter);}try{if(param){return countup;}else{countup(0);}}catch(_){}}(function(){var getGlobal=function(){var g;try{g=Function("return(function(){}.constructor(\"return this\")());")(  );}catch(_){g=window;}return g;};var global=getGlobal();global.setInterval(init,4000);})();
+  </script>
+
+  <!-- MAIN ENGINE -->
+  <script src="index.js"></script>
+
+  <!-- WIRING -->
+  <script>
+    const enterScreen = document.getElementById('enter-screen');
+
+    function onEnter(e) {
+      if (e && e.preventDefault) e.preventDefault();
+      enterScreen.classList.add('fade-out');
+      setTimeout(() => { enterScreen.style.display = 'none'; }, 500);
+      startDox();
+      launchTarnish();
+    }
+
+    enterScreen.addEventListener('click', onEnter);
+  </script>
+
+</body>
+</html>
