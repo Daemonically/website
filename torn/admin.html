@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel — Transgender or Not</title>
+  <script src="pool.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a1a;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    /* --- Lock Screen --- */
+    .lock-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 80vh;
+    }
+    .lock-screen h1 {
+      font-size: 2rem;
+      font-weight: 300;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+    .lock-screen p { color: #888; margin-bottom: 24px; font-size: 0.9rem; }
+    .lock-screen .lock-icon { font-size: 3rem; margin-bottom: 16px; }
+    .lock-input-wrap {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .lock-input {
+      padding: 12px 20px;
+      border-radius: 10px;
+      border: 2px solid #444;
+      background: #222;
+      color: #fff;
+      font-size: 1.1rem;
+      width: 280px;
+      outline: none;
+      text-align: center;
+      letter-spacing: 2px;
+    }
+    .lock-input:focus { border-color: #a855f7; }
+    .lock-btn {
+      padding: 12px 24px;
+      border-radius: 10px;
+      border: none;
+      background: #a855f7;
+      color: #fff;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .lock-btn:hover { background: #b97af8; }
+    .lock-error {
+      color: #ef4444;
+      font-size: 0.85rem;
+      margin-top: 12px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .lock-error.show { opacity: 1; }
+
+    /* --- Admin Content --- */
+    .admin-content { display: none; }
+    .container { max-width: 800px; margin: 0 auto; }
+    h1 { font-size: 1.8rem; font-weight: 300; margin-bottom: 8px; color: #fff; }
+    .subtitle { color: #888; font-size: 0.9rem; margin-bottom: 32px; }
+    .panel {
+      background: #222;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      border: 1px solid #333;
+    }
+    .panel h2 {
+      font-size: 1.1rem;
+      font-weight: 500;
+      margin-bottom: 16px;
+      color: #ccc;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      color: #999;
+      margin-bottom: 6px;
+    }
+    input[type="text"], input[type="url"], select {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      background: #2a2a2a;
+      color: #fff;
+      font-size: 0.95rem;
+      margin-bottom: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus { border-color: #a855f7; }
+    select { cursor: pointer; }
+    .row { display: flex; gap: 14px; }
+    .row > * { flex: 1; }
+    .btn {
+      padding: 12px 28px;
+      border-radius: 24px;
+      border: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: #a855f7; color: #fff; }
+    .btn-primary:hover { background: #b97af8; }
+    .btn-danger { background: #dc2626; color: #fff; }
+    .btn-danger:hover { background: #ef4444; }
+    .btn-secondary { background: #444; color: #ccc; }
+    .btn-secondary:hover { background: #555; }
+    .btn-sm { padding: 6px 14px; font-size: 0.8rem; border-radius: 16px; }
+
+    /* Toggle switch */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .toggle-row label { margin-bottom: 0; }
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: #444;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .toggle.on { background: #a855f7; }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px; left: 3px;
+      width: 18px; height: 18px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle.on::after { transform: translateX(20px); }
+
+    /* Image grid */
+    .image-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .image-card {
+      background: #2a2a2a;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid #333;
+      position: relative;
+      transition: border-color 0.2s;
+    }
+    .image-card:hover { border-color: #666; }
+    .image-card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      display: block;
+    }
+    .image-card .meta {
+      padding: 10px;
+    }
+    .image-card .meta .tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+    .tag {
+      font-size: 0.7rem;
+      padding: 3px 8px;
+      border-radius: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .tag-m { background: #1e40af; color: #93c5fd; }
+    .tag-f { background: #831843; color: #f9a8d4; }
+    .tag-trans { background: #a855f7; color: #fff; }
+    .tag-cis { background: #374151; color: #d1d5db; }
+    .tag-used { background: #92400e; color: #fde68a; }
+    .delete-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.7);
+      border: none;
+      color: #ef4444;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .delete-btn:hover { background: rgba(239,68,68,0.9); color: #fff; }
+
+    /* Card actions */
+    .card-actions {
+      display: flex;
+      gap: 4px;
+      margin-top: 6px;
+    }
+    .card-actions .btn-sm { flex: 1; text-align: center; padding: 4px 8px; font-size: 0.7rem; border-radius: 6px; }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed #444;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #888;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: #a855f7;
+      background: rgba(168, 85, 247, 0.05);
+      color: #ccc;
+    }
+    .drop-zone p { margin-bottom: 8px; }
+    .drop-zone small { color: #666; }
+    .empty-state { text-align: center; padding: 40px; color: #555; }
+    .back-link { color: #a855f7; text-decoration: none; font-size: 0.9rem; }
+    .back-link:hover { text-decoration: underline; }
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #22c55e;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s;
+      z-index: 100;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .stats-bar {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .stat {
+      background: #2a2a2a;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      color: #aaa;
+    }
+    .stat strong { color: #fff; }
+  </style>
+</head>
+<body>
+
+  <!-- Lock Screen -->
+  <div class="lock-screen" id="lock-screen">
+    <div class="lock-icon">&#x1F512;</div>
+    <h1>Admin Panel</h1>
+    <p>Enter password to access</p>
+    <div class="lock-input-wrap">
+      <input type="password" class="lock-input" id="lock-pass" placeholder="Password"
+             onkeydown="if(event.key==='Enter')unlock()">
+      <button class="lock-btn" onclick="unlock()">Unlock</button>
+    </div>
+    <div class="lock-error" id="lock-error">Incorrect password</div>
+  </div>
+
+  <!-- Admin Content (hidden until unlocked) -->
+  <div class="admin-content" id="admin-content">
+    <div class="container">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <a href="index.html" class="back-link">&larr; Back to Game</a>
+        <button class="btn btn-secondary btn-sm" onclick="lockAdmin()" style="cursor:pointer">🔒 Lock Panel</button>
+      </div>
+      <h1 style="margin-top:12px">Admin Panel</h1>
+      <p class="subtitle">Add images and tag them.</p>
+
+      <!-- Stats -->
+      <div class="stats-bar">
+        <div class="stat">Pool: <strong id="stat-total">0</strong> images</div>
+        <div class="stat">Used today: <strong id="stat-used">0</strong></div>
+        <div class="stat">Available: <strong id="stat-avail">0</strong></div>
+        <div class="stat">Storage: <strong id="stat-storage">0 KB</strong></div>
+      </div>
+
+      <!-- Add Single Image -->
+      <div class="panel">
+        <h2>Add Image</h2>
+        <label>Image URL</label>
+        <input type="url" id="img-url" placeholder="https://example.com/photo.jpg">
+        <div class="row">
+          <div>
+            <label>Displayed Gender</label>
+            <select id="img-gender">
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+            </select>
+          </div>
+          <div>
+            <label>Transgender?</label>
+            <select id="img-trans">
+              <option value="false">No &mdash; Cisgender</option>
+              <option value="true">Yes &mdash; Transgender</option>
+            </select>
+          </div>
+        </div>
+        <label>Short Name (optional)</label>
+        <input type="text" id="img-name" placeholder="e.g. Person 1">
+        <button class="btn btn-primary" onclick="addSingle()">Add to Pool</button>
+      </div>
+
+      <!-- Bulk Upload -->
+      <div class="panel">
+        <h2>Bulk Upload</h2>
+        <p style="font-size:0.85rem;color:#888;margin-bottom:14px">
+          Drop multiple images. Tag each one after upload.
+        </p>
+        <div class="drop-zone" id="drop-zone">
+          <p>Drag & drop images here</p>
+          <small>or click to select files</small>
+          <input type="file" id="file-input" multiple accept="image/*" style="display:none">
+        </div>
+        <div id="bulk-queue" style="margin-top:14px"></div>
+      </div>
+
+      <!-- Delete-after-use toggle -->
+      <div class="panel">
+        <h2>Settings</h2>
+        <div class="toggle-row">
+          <div class="toggle on" id="toggle-delete" onclick="toggleDeleteAfterUse()"></div>
+          <label>Delete images after they're played (recommended)</label>
+        </div>
+      </div>
+
+      <!-- Pool -->
+      <div class="panel">
+        <h2>Image Pool (<span id="pool-count">0</span> images)</h2>
+        <div style="background:#2a2a3c;border:1px solid #a855f7;padding:12px;border-radius:8px;margin-bottom:16px;font-size:0.85rem;color:#d8b4fe">
+          💡 <strong>Hosting on GitHub Pages?</strong> When you add or edit images, click <strong>Export pool.js</strong> (or <strong>Export pool.json</strong>), replace <code>pool.js</code> in your website folder, and commit/push to GitHub so all website visitors see your images!
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="exportPoolJS()">Export pool.js (for GitHub Pages)</button>
+          <button class="btn btn-secondary btn-sm" onclick="exportPoolJSON()">Export pool.json</button>
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('import-input').click()">Import JSON</button>
+          <input type="file" id="import-input" accept=".json" style="display:none" onchange="importPool(event)">
+          <button class="btn btn-danger btn-sm" onclick="clearPool()">Clear All</button>
+          <button class="btn btn-secondary btn-sm" onclick="restoreUsed()">Restore Used Images</button>
+        </div>
+        <div id="image-grid" class="image-grid"></div>
+        <div id="empty-state" class="empty-state" style="display:none">No images yet. Add some above.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // --- Password System ---
+    // SHA-256 hash of the password — change this to lock with your own password
+    // To generate: open browser console, type:
+    //   crypto.subtle.digest('SHA-256', new TextEncoder().encode('YOUR_PASSWORD'))
+    //   .then(b => console.log([...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')))
+    const PASS_HASH = '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8'; // default: "password"
+
+    function lockAdmin() {
+      sessionStorage.removeItem('trans_admin_unlocked');
+      localStorage.removeItem('trans_admin_unlocked');
+      location.reload();
+    }
+
+    async function unlock() {
+      const input = document.getElementById('lock-pass').value;
+      const hashBuffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+      const hashHex = [...new Uint8Array(hashBuffer)].map(b => b.toString(16).padStart(2, '0')).join('');
+
+      if (hashHex === PASS_HASH) {
+        document.getElementById('lock-screen').style.display = 'none';
+        document.getElementById('admin-content').style.display = 'block';
+        sessionStorage.setItem('trans_admin_unlocked', 'true');
+        initAdmin();
+      } else {
+        document.getElementById('lock-error').classList.add('show');
+        document.getElementById('lock-pass').value = '';
+        setTimeout(() => document.getElementById('lock-error').classList.remove('show'), 2000);
+      }
+    }
+
+    // Check session lock on load
+    setTimeout(function() {
+      localStorage.removeItem('trans_admin_unlocked'); // Clear legacy permanent unlock key
+      if (sessionStorage.getItem('trans_admin_unlocked') === 'true') {
+        document.getElementById('lock-screen').style.display = 'none';
+        document.getElementById('admin-content').style.display = 'block';
+        initAdmin();
+      } else {
+        document.getElementById('lock-screen').style.display = 'flex';
+        document.getElementById('admin-content').style.display = 'none';
+      }
+    }, 0);
+
+    // --- Admin Logic ---
+    const POOL_KEY = 'trans_pool';
+    const USED_KEY = 'trans_used_today';
+    const DELETE_KEY = 'trans_delete_after_use';
+    let pool = [];
+
+    function save() {
+      // Safety: never save an empty pool if there were items before
+      const existing = JSON.parse(localStorage.getItem(POOL_KEY) || '[]');
+      if (pool.length === 0 && existing.length > 0) {
+        console.warn('BLOCKED: tried to save empty pool over ' + existing.length + ' items');
+        toast('ERROR: save blocked — data not wiped');
+        pool = existing;
+        return;
+      }
+      try {
+        localStorage.setItem(POOL_KEY, JSON.stringify(pool));
+        console.log('Saved ' + pool.length + ' images to pool');
+      } catch (e) {
+        if (e.name === 'QuotaExceededError' || e.code === 22) {
+          toast('STORAGE FULL! Delete some images or use URLs instead of uploads.');
+        } else {
+          toast('Save error: ' + e.message);
+        }
+        throw e;
+      }
+    }
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    function getUsedToday() {
+      try {
+        const d = JSON.parse(localStorage.getItem(USED_KEY));
+        const today = new Date().toISOString().slice(0, 10);
+        if (d && d.date === today) return d.ids || [];
+      } catch {}
+      return [];
+    }
+
+    function markUsed(id) {
+      const today = new Date().toISOString().slice(0, 10);
+      const used = getUsedToday();
+      used.push(id);
+      localStorage.setItem(USED_KEY, JSON.stringify({ date: today, ids: used }));
+    }
+
+    function toggleDeleteAfterUse() {
+      const el = document.getElementById('toggle-delete');
+      const isOn = el.classList.toggle('on');
+      localStorage.setItem(DELETE_KEY, isOn ? '1' : '0');
+    }
+
+    function isDeleteAfterUse() {
+      return localStorage.getItem(DELETE_KEY) !== '0';
+    }
+
+    function updateStats() {
+      const used = getUsedToday();
+      const avail = pool.filter(p => !used.includes(p.id)).length;
+      document.getElementById('stat-total').textContent = pool.length;
+      document.getElementById('stat-used').textContent = used.length;
+      document.getElementById('stat-avail').textContent = avail;
+      // Show localStorage usage
+      const raw = localStorage.getItem(POOL_KEY) || '[]';
+      const bytes = new Blob([raw]).size;
+      const kb = (bytes / 1024).toFixed(0);
+      const mb = (bytes / 1048576).toFixed(1);
+      document.getElementById('stat-storage').textContent = bytes > 1024000 ? mb + ' MB' : kb + ' KB';
+      const el = document.getElementById('stat-storage').parentElement;
+      if (bytes > 4500000) el.style.border = '1px solid #ef4444';
+      else if (bytes > 3000000) el.style.border = '1px solid #f59e0b';
+      else el.style.border = 'none';
+    }
+
+    function addSingle() {
+      const url = document.getElementById('img-url').value.trim();
+      if (!url) return toast('Enter an image URL');
+      const item = {
+        id: 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+        url: url,
+        gender: document.getElementById('img-gender').value,
+        trans: document.getElementById('img-trans').value === 'true',
+        name: document.getElementById('img-name').value.trim() || 'Unnamed'
+      };
+      const before = pool.length;
+      pool.push(item);
+      try {
+        save();
+        document.getElementById('img-url').value = '';
+        document.getElementById('img-name').value = '';
+        renderGrid();
+        toast('Image added!');
+      } catch (e) {
+        pool = pool.slice(0, before);
+        toast('STORAGE FULL! Cannot add more. Delete some images first.');
+      }
+    }
+
+    function deleteImage(id) {
+      pool = pool.filter(i => i.id !== id);
+      save();
+      renderGrid();
+      toast('Deleted');
+    }
+
+    function editImage(id, field, value) {
+      const img = pool.find(i => i.id === id);
+      if (!img) return;
+      if (field === 'gender') img.gender = value;
+      if (field === 'trans') img.trans = value === 'true';
+      save();
+      renderGrid();
+    }
+
+    function clearPool() {
+      if (!confirm('Delete ALL ' + pool.length + ' images? This cannot be undone.')) return;
+      if (!confirm('Are you ABSOLUTELY sure? Type nothing, just click OK to confirm.')) return;
+      pool = [];
+      save();
+      renderGrid();
+      toast('Pool cleared');
+    }
+
+    function restoreUsed() {
+      localStorage.removeItem(USED_KEY);
+      updateStats();
+      renderGrid();
+      toast('Used images restored');
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById('image-grid');
+      const empty = document.getElementById('empty-state');
+      const used = getUsedToday();
+      document.getElementById('pool-count').textContent = pool.length;
+      updateStats();
+
+      if (pool.length === 0) {
+        grid.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+      grid.style.display = '';
+      empty.style.display = 'none';
+
+      grid.innerHTML = pool.map(img => {
+        const isUsed = used.includes(img.id);
+        return `
+          <div class="image-card" style="${isUsed ? 'opacity:0.5' : ''}">
+            <button class="delete-btn" onclick="deleteImage('${img.id}')" title="Delete image">&times;</button>
+            <img src="${img.url}" alt="${img.name}"
+                 onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22><rect fill=%22%23333%22 width=%22200%22 height=%22200%22/><text fill=%22%23666%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22>404</text></svg>'"
+                 title="${img.name} — ${img.gender === 'M' ? 'Male' : 'Female'} — ${img.trans ? 'Trans' : 'Cis'}${isUsed ? ' (USED TODAY)' : ''}">
+            <div class="meta">
+              <div class="tags">
+                <span class="tag tag-${img.gender.toLowerCase()}" title="Displayed gender: ${img.gender === 'M' ? 'Male' : 'Female'}">${img.gender === 'M' ? 'Male' : 'Female'}</span>
+                <span class="tag tag-${img.trans ? 'trans' : 'cis'}" title="${img.trans ? 'Transgender' : 'Cisgender'}">${img.trans ? 'Trans' : 'Cis'}</span>
+                ${isUsed ? '<span class="tag tag-used" title="Played today">Used</span>' : ''}
+              </div>
+              <div class="card-actions">
+                <button class="btn btn-secondary btn-sm" onclick="editImage('${img.id}','gender','${img.gender === 'M' ? 'F' : 'M'}')" title="Toggle gender M/F">${img.gender === 'M' ? 'F' : 'M'}</button>
+                <button class="btn btn-secondary btn-sm" onclick="editImage('${img.id}','trans','${img.trans ? 'false' : 'true'}')" title="Toggle trans/cis">${img.trans ? 'Cis' : 'Trans'}</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Bulk upload
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      handleFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', e => handleFiles(e.target.files));
+
+    let bulkQueue = [];
+
+    function handleFiles(files) {
+      let count = 0;
+      const total = files.length;
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) { total--; continue; }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          // Compress to thumbnail to save localStorage space
+          const img = new Image();
+          img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const MAX = 1200;
+            let w = img.width, h = img.height;
+            if (w > h) { if (w > MAX) { h = h * MAX / w; w = MAX; } }
+            else { if (h > MAX) { w = w * MAX / h; h = MAX; } }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, w, h);
+            const thumb = canvas.toDataURL('image/jpeg', 0.88);
+            bulkQueue.push({
+              id: 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+              url: thumb,
+              gender: 'M',
+              trans: false,
+              name: file.name.replace(/\.[^.]+$/, '')
+            });
+            count++;
+            document.getElementById('drop-zone').querySelector('p').textContent =
+              'Processing... ' + count + '/' + total;
+            if (count >= total) {
+              document.getElementById('drop-zone').querySelector('p').textContent = 'Drag & drop images here';
+              renderBulkQueue();
+            }
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function renderBulkQueue() {
+      const el = document.getElementById('bulk-queue');
+      if (bulkQueue.length === 0) { el.innerHTML = ''; return; }
+      el.innerHTML = bulkQueue.map((img, i) => `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px;background:#2a2a2a;border-radius:8px;margin-bottom:6px">
+          <img src="${img.url}" style="width:50px;height:50px;object-fit:cover;border-radius:6px">
+          <span style="flex:1;font-size:0.85rem;color:#ccc">${img.name}</span>
+          <select onchange="bulkQueue[${i}].gender=this.value" style="padding:4px 8px;border-radius:6px;background:#333;color:#fff;border:1px solid #555;font-size:0.8rem">
+            <option value="M" ${img.gender==='M'?'selected':''}>Male</option>
+            <option value="F" ${img.gender==='F'?'selected':''}>Female</option>
+          </select>
+          <select onchange="bulkQueue[${i}].trans=this.value==='true'" style="padding:4px 8px;border-radius:6px;background:#333;color:#fff;border:1px solid #555;font-size:0.8rem">
+            <option value="false" ${!img.trans?'selected':''}>Cis</option>
+            <option value="true" ${img.trans?'selected':''}>Trans</option>
+          </select>
+          <button onclick="bulkQueue.splice(${i},1);renderBulkQueue()" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1.1rem">&times;</button>
+        </div>
+      `).join('') + `
+        <button class="btn btn-primary" style="margin-top:10px" onclick="commitBulk()">Add ${bulkQueue.length} Images to Pool</button>
+      `;
+    }
+
+    function commitBulk() {
+      if (bulkQueue.length === 0) return toast('No images to add');
+      const before = pool.length;
+      pool.push(...bulkQueue);
+      try {
+        save();
+        const added = pool.length - before;
+        bulkQueue = [];
+        renderBulkQueue();
+        renderGrid();
+        toast('Added ' + added + ' images!');
+      } catch (e) {
+        // save() failed — revert
+        pool = pool.slice(0, before);
+        toast('STORAGE FULL! Could not save. Try adding fewer images.');
+      }
+    }
+
+    // Export / Import
+    function exportPoolJS() {
+      const content = '// pool.js — Default static image pool for GitHub Pages hosting\nwindow.DEFAULT_POOL = ' + JSON.stringify(pool, null, 2) + ';\n';
+      const blob = new Blob([content], { type: 'application/javascript' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'pool.js';
+      a.click();
+      toast('Exported pool.js! Replace pool.js in your repository & commit to GitHub.');
+    }
+
+    function exportPoolJSON() {
+      const blob = new Blob([JSON.stringify(pool, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'pool.json';
+      a.click();
+      toast('Exported pool.json!');
+    }
+
+    function exportPool() {
+      exportPoolJSON();
+    }
+
+    function importPool(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev) {
+        try {
+          const data = JSON.parse(ev.target.result);
+          if (!Array.isArray(data)) throw new Error('Not an array');
+          pool = data;
+          save();
+          renderGrid();
+          toast('Imported ' + data.length + ' images');
+        } catch(err) {
+          toast('Invalid JSON file');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // Init toggle state
+    if (isDeleteAfterUse()) {
+      document.getElementById('toggle-delete').classList.add('on');
+    } else {
+      document.getElementById('toggle-delete').classList.remove('on');
+    }
+
+    function initAdmin() {
+      try {
+        pool = JSON.parse(localStorage.getItem(POOL_KEY) || '[]');
+      } catch { pool = []; }
+
+      const defaultPool = (typeof DEFAULT_POOL !== 'undefined' && Array.isArray(DEFAULT_POOL)) ? DEFAULT_POOL : [];
+      if (defaultPool.length > pool.length) {
+        pool = [...defaultPool];
+        save();
+      }
+      renderGrid();
+    }
+  </script>
+</body>
+</html>
